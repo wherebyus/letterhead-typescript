@@ -1,0 +1,63 @@
+{
+  "name": "@letterhead/sdk",
+  "version": "0.1.0",
+  "description": "The official TypeScript SDK for the Letterhead API.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wherebyus/letterhead-typescript.git"
+  },
+  "homepage": "https://github.com/wherebyus/letterhead-typescript#readme",
+  "keywords": [
+    "letterhead",
+    "newsletter",
+    "email",
+    "api",
+    "sdk"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "spec:pull": "node scripts/pull-spec.mjs",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:generated": "npm run generate && git diff --exit-code -- src/generated",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "openapi-typescript": "7.13.0",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "yaml": "2.9.1"
+  }
+}
