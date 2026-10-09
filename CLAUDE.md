@@ -1,12 +1,12 @@
 # CLAUDE.md — letterhead-typescript
 
-The official TypeScript SDK for the Letterhead API, published to npm as `@tryletterhead/sdk`. Planned and
-tracked in `the-red-book` as the `api-sdks` project (`projects/api-sdks.md`).
+The official TypeScript SDK for the Letterhead API, published to npm as `@tryletterhead/sdk`. This repository
+is public: never name or link a private Letterhead repository, project, or internal tool in it.
 
 - **A thin, typed wrapper, nothing more.** Types are generated from `spec/openapi.yaml` (a copy of
-  `help-center/openapi.yaml`, the published API description) by `scripts/generate.mjs` into
+  Letterhead's published API description, maintained outside this repository) by `scripts/generate.mjs` into
   `src/generated/schema.ts`. Never hand-edit the generated file; never hand-write a type the spec already
-  describes. A wrong type is fixed in the help-center spec, then pulled and regenerated here.
+  describes. A wrong type is fixed in the published spec, then copied in and regenerated here.
 - **The `api=true` flag is the SDK's job.** The generator strips it from the types and `src/client.ts` adds
   it to every request. Keep both halves in step.
 - **Resource methods** (`contacts`, `tags`, `letters`) are a small curated layer over `raw`: one line each,
