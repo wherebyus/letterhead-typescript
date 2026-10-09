@@ -1,4 +1,4 @@
-# @letterhead/sdk
+# @tryletterhead/sdk
 
 The official TypeScript SDK for the [Letterhead API](https://help.tryletterhead.com). Every request and
 response is typed, generated from the same API description that publishes the API reference, so the SDK
@@ -7,7 +7,7 @@ can't drift from the API.
 ## Install
 
 ```sh
-npm install @letterhead/sdk
+npm install @tryletterhead/sdk
 ```
 
 Requires Node 18 or later (or any runtime with a global `fetch`).
@@ -15,7 +15,7 @@ Requires Node 18 or later (or any runtime with a global `fetch`).
 ## Quick start
 
 ```ts
-import { createLetterheadClient } from '@letterhead/sdk';
+import { createLetterheadClient } from '@tryletterhead/sdk';
 
 const letterhead = createLetterheadClient({ apiKey: process.env.LETTERHEAD_API_KEY! });
 

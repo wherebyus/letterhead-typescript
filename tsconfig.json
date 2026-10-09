@@ -20,7 +20,7 @@
       "node"
     ],
     "paths": {
-      "@letterhead/sdk": [
+      "@tryletterhead/sdk": [
         "./src/index.ts"
       ]
     }
