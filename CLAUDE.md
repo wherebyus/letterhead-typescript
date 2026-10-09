@@ -1,6 +1,6 @@
 # CLAUDE.md — letterhead-typescript
 
-The official TypeScript SDK for the Letterhead API, published to npm as `@letterhead/sdk`. Planned and
+The official TypeScript SDK for the Letterhead API, published to npm as `@tryletterhead/sdk`. Planned and
 tracked in `the-red-book` as the `api-sdks` project (`projects/api-sdks.md`).
 
 - **A thin, typed wrapper, nothing more.** Types are generated from `spec/openapi.yaml` (a copy of

@@ -1,7 +1,7 @@
 name: Publish
 
-# Publishes @letterhead/sdk to npm when a version tag (v0.1.0, ...) is pushed.
-# Needs an NPM_TOKEN repository secret with publish rights on the @letterhead scope.
+# Publishes @tryletterhead/sdk to npm when a version tag (v0.1.0, ...) is pushed.
+# Needs an NPM_TOKEN repository secret with publish rights on the @tryletterhead scope.
 on:
   push:
     tags: ['v*']
