@@ -73,7 +73,7 @@ npm run typecheck && npm test && npm run build
 repository. Commit it together with the regenerated `src/generated/schema.ts`; CI fails if they disagree.
 
 To release, bump `version` in `package.json`, merge, and push a matching tag (`v0.1.0`). The Publish
-workflow publishes to npm.
+workflow publishes to npm through Trusted Publishing, so no token is needed.
 
 ## License
 
