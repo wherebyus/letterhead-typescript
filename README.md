@@ -60,20 +60,9 @@ const { data, error } = await letterhead.raw.GET('/api/v3/contacts/segments');
 
 You never pass the `api=true` flag the API reference mentions — the SDK adds it to every request.
 
-## Development
+## Contributing
 
-```sh
-npm ci
-npm run spec:pull   # copy ../help-center/openapi.yaml into spec/ (or pass a path)
-npm run generate    # regenerate src/generated/schema.ts from spec/openapi.yaml
-npm run typecheck && npm test && npm run build
-```
-
-`spec/openapi.yaml` is a copy of the published API description, whose source of truth is the help center
-repository. Commit it together with the regenerated `src/generated/schema.ts`; CI fails if they disagree.
-
-To release, bump `version` in `package.json`, merge, and push a matching tag (`v0.1.0`). The Publish
-workflow publishes to npm through Trusted Publishing, so no token is needed.
+See [CONTRIBUTING.md](https://github.com/wherebyus/letterhead-typescript/blob/main/CONTRIBUTING.md).
 
 ## License
 
