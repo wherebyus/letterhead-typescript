@@ -47,7 +47,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check:generated": "npm run generate && git diff --exit-code -- src/generated",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run test:dist",
+    "test:dist": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "openapi-fetch": "0.17.0"

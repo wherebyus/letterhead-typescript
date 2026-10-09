@@ -26,3 +26,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Built package loads through import and require
+        run: npm run test:dist

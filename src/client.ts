@@ -1,5 +1,10 @@
-import createClient, { type Client, type Middleware } from 'openapi-fetch';
+import createClientExport, { defaultBodySerializer, type Client, type Middleware } from 'openapi-fetch';
 import type { operations, paths } from './generated/schema';
+
+// openapi-fetch's CommonJS build sets `exports.default` without an `__esModule` marker, so in our CommonJS output
+// the default import resolves to the whole module object rather than the function. Fall back to its `default`.
+const createClient =
+  (createClientExport as unknown as { default?: typeof createClientExport }).default ?? createClientExport;
 
 /** The production Letterhead API. Customers on their own tenant pass that tenant's API URL instead. */
 export const DEFAULT_BASE_URL = 'https://api.tryletterhead.com';
@@ -59,16 +64,26 @@ const apiFlagMiddleware: Middleware = {
   },
 };
 
-const serializeBodyWithApiFlag = (body: unknown): BodyInit => {
+const withApiFlag = (body: unknown): unknown => {
   if (body instanceof FormData) {
-    body.set('api', 'true');
-    return body;
+    // Copy rather than change the caller's FormData.
+    const flaggedForm = new FormData();
+    for (const [name, value] of body) {
+      flaggedForm.append(name, value);
+    }
+    flaggedForm.set('api', 'true');
+    return flaggedForm;
   }
   if (body && typeof body === 'object' && !Array.isArray(body)) {
-    return JSON.stringify({ ...body, api: true });
+    return { ...body, api: true };
   }
-  return JSON.stringify(body);
+  return body;
 };
+
+// openapi-fetch calls a body serializer with the request headers too (it uses them to choose URL-encoding), though
+// its type only declares the body. Add the flag, then hand both to its default serializer.
+const serializeBodyWithApiFlag = (body: unknown, headers?: unknown): unknown =>
+  (defaultBodySerializer as (body: unknown, headers?: unknown) => unknown)(withApiFlag(body), headers);
 
 const unwrap = <Data>(result: { data?: Data; error?: unknown; response: Response }): Data => {
   if (result.error !== undefined || !result.response.ok) {

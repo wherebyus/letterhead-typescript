@@ -106,3 +106,27 @@ describe('createLetterheadClient', () => {
     expect(captured[0]?.body).toContain('name="api"');
   });
 });
+
+describe('request bodies', () => {
+  it('does not change the FormData the caller passed in', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    const form = new FormData();
+    form.set('url', 'https://example.org');
+
+    await client.raw.POST('/api/v3/letters/templates/actions/generate-from-url', { body: form as never });
+
+    expect(form.get('api')).toBeNull();
+    expect(captured[0]?.body).toContain('name="api"');
+  });
+
+  it('URL-encodes a body sent with a form content type, flag included', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+
+    await client.raw.POST('/api/v3/contacts', {
+      body: { email: 'person@example.org' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+
+    expect(captured[0]?.body).toBe('email=person%40example.org&api=true');
+  });
+});
