@@ -1,7 +1,8 @@
 name: Publish
 
 # Publishes @tryletterhead/sdk to npm when a version tag (v0.1.0, ...) is pushed.
-# Needs an NPM_TOKEN repository secret with publish rights on the @tryletterhead scope.
+# Authenticates with npm Trusted Publishing (GitHub OIDC): npm trusts this repo's publish.yml, so no
+# token or secret is involved, and provenance is attached automatically.
 on:
   push:
     tags: ['v*']
@@ -24,10 +25,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           registry-url: https://registry.npmjs.org
+      - name: npm 11.5.1+ (needed for Trusted Publishing)
+        run: npm install -g npm@latest
       - run: npm ci
       - name: Tag matches package.json version
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       - run: npm run check:generated
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
