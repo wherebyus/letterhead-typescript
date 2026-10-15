@@ -218,6 +218,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/contacts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a contacts export
+         * @description Starts a CSV export of every contact that matches your filters, built in the background. The request returns straight away with an `exportId`; poll **Get a contacts export** with it until the status is `ready`, then download the file from the `downloadUrl` it returns. Each download link works for 7 days.
+         *
+         *     The file has one row per contact: first name, last name, and email, then one column per custom field you've defined, then the contact's tags (separated by `|`), then one column per newsletter, headed with its slug, holding `1` when the contact is subscribed to it. Engagement and date-added columns aren't included — use **Browse contacts with filters** for those.
+         *
+         *     It takes the same filters as **Browse contacts with filters**, so you can try a filter there before exporting. Send an empty body to export your whole audience. Larger audiences take longer to build, so poll every minute or so rather than continuously.
+         *
+         *     This is a company-level (v3) request. Authenticate with a company API key as a Bearer token.
+         */
+        post: operations["startAContactsExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/contacts/exports/{exportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a contacts export
+         * @description Returns where an export started with **Start a contacts export** stands, and its download link once it's ready.
+         *
+         *     `status` is one of:
+         *
+         *     - `processing` — still being built. Ask again in a minute or so.
+         *     - `ready` — done. Download the CSV from `downloadUrl` before `expiresAt`, 7 days after it was built.
+         *     - `empty` — your filters matched no contacts, so there's no file.
+         *     - `failed` — the export couldn't be completed. Start a new one; if it fails again, contact support.
+         *
+         *     An export can be looked up for 7 days after it starts. After that, or for an `exportId` that isn't yours, this returns 404.
+         *
+         *     This is a company-level (v3) read. Authenticate with a company API key as a Bearer token.
+         */
+        get: operations["getAContactsExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/contacts/tags": {
         parameters: {
             query?: never;
@@ -1332,6 +1389,51 @@ export interface paths {
          */
         post: operations["retryASubscriberImport"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/contacts/imports/{importUniqueId}/field-setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The import's unique identifier, from **List subscriber imports**. */
+                importUniqueId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get an import's columns awaiting field setup
+         * @description For an import whose status is `needsFieldSetup`, lists the columns in its file that match no contact field, each with a few example values from the file and a suggested custom-field type. Answer with **Keep columns as custom fields and continue an import**, or cancel with **Cancel an import awaiting field setup**.
+         *
+         *     Returns `409` when the import is no longer waiting on field setup, and `422` when its upload has expired (import the file again).
+         *
+         *     This is a company-level (v3) read. Authenticate with a company API key as a Bearer token.
+         */
+        get: operations["getAnImportColumnsAwaitingFieldSetup"];
+        put?: never;
+        /**
+         * Keep columns as custom fields and continue an import
+         * @description Answers an import whose status is `needsFieldSetup`. Each entry in `fields` keeps one column: Letterhead creates a custom field named after the column (or uses the custom field you already have with that name) and the import fills it. Every other column the import stopped on is skipped. Send an empty `fields` array to skip them all. Returns `202 Accepted` — the import continues asynchronously.
+         *
+         *     A kept cell that doesn't fit its field's type is left out of that contact, and the contact still imports. Where another mapped column already feeds the same field, its value wins on each row.
+         *
+         *     Returns `409` when the import is no longer waiting on field setup (it was already answered or cancelled), and `422` — changing nothing — when the upload has expired, a column isn't one the import stopped on, two columns would become one field, or a column's name is one Letterhead already uses.
+         *
+         *     This is a company-level (v3) write. Authenticate with a company API key as a Bearer token.
+         */
+        post: operations["keepColumnsAsCustomFieldsAndContinueAnImport"];
+        /**
+         * Cancel an import awaiting field setup
+         * @description Cancels an import whose status is `needsFieldSetup`. Its status becomes `cancelled`. Nothing from the file had been imported, so nothing is undone. Works even when the upload has expired.
+         *
+         *     Returns `409` when the import is no longer waiting on field setup.
+         *
+         *     This is a company-level (v3) write. Authenticate with a company API key as a Bearer token.
+         */
+        delete: operations["cancelAnImportAwaitingFieldSetup"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3792,6 +3894,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/reports/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export a report by email
+         * @description Builds a CSV report across the newsletters and date range you choose, then emails a download link to each recipient. The request returns as soon as the export is queued; the file arrives by email, usually within a few minutes. Each download link works for 7 days.
+         *
+         *     Choose the report with `reportType`:
+         *
+         *     - `1` — **Clicks.** One row per link per edition: URL, total clicks, unique clicks, the edition, its letter ID, and the newsletter.
+         *     - `2` — **Engagement.** One row per edition published in the range: sent, delivered, accepted, bounces (hard and soft, with rates), total opens, unique opens, unique confirmed opens, total clicks, unique clicks, and unsubscribes.
+         *     - `3` — **Growth.** One row per newsletter: total audience, subscribers, new subscribers, not subscribed, pending opt-in, unsubscribed, and cleaned, plus the size of each engagement group (Loyalists, New & Engaged, Casual, Fading, Ghosts, Single Newsletter) and how much each changed over the range.
+         *
+         *     These are rolled-up figures per edition, per link, or per newsletter. They don't list individual contacts — to read one contact's engagement, use **Get a contact's engagement breakdown**.
+         *
+         *     `from` and `to` are calendar days and both are included in full.
+         *
+         *     This is a company-level (v3) request. Authenticate with a company API key as a Bearer token.
+         */
+        post: operations["exportAReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/automations": {
         parameters: {
             query?: never;
@@ -5205,7 +5339,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description Channel identifier (slug) of a newsletter to compare. Repeat the parameter once per newsletter — between 2 and 5 in total, and each must be distinct. */
-                "channels[]": string;
+                "channels[]": string[];
             };
             header?: never;
             path?: never;
@@ -5571,6 +5705,137 @@ export interface operations {
                         total?: number;
                     };
                 };
+            };
+        };
+    };
+    startAContactsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "channel": "the-morning-brief",
+                 *       "statuses": [
+                 *         1
+                 *       ]
+                 *     }
+                 */
+                "application/json": {
+                    /** @description Free-text search across email, first name, and last name. Max 500 characters. */
+                    query?: string;
+                    /** @description Export only the contacts of this one newsletter, by its identifier (slug). */
+                    channel?: string;
+                    /** @description Restrict to contacts whose subscription status is one of these values. See the subscription status table on **Add or update subscriptions in bulk**. */
+                    statuses?: number[];
+                    /** @description Restrict to contacts carrying any of these tags. */
+                    tags?: string[];
+                    /** @description Restrict to contacts with no tags at all. Mutually exclusive with a non-empty `tags`. */
+                    untagged?: boolean;
+                    /** @description Typed custom-field comparisons, AND'd together with the rest of the filter. */
+                    customFields?: {
+                        /** @description The custom field's name. */
+                        key?: string;
+                        /** @description `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`, or `exists`. */
+                        op?: string;
+                        /** @description Comparison value. Omit when `op` is `exists`. */
+                        value?: unknown;
+                    }[];
+                    /** @description A saved segment (see **List segments**) whose criteria are AND-merged with the rest of this filter set. */
+                    segmentId?: number;
+                    /** @description Restrict to contacts created on or after this date (inclusive). Date-only (`YYYY-MM-DD`) or a full ISO 8601 timestamp. */
+                    createdAtFrom?: string;
+                    /** @description Restrict to contacts created on or before this date (inclusive). */
+                    createdAtTo?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The export has started. Poll **Get a contacts export** with the returned `exportId`. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": {
+                     *         "exportId": "api-20261013_141502-Vq3kT9xLm2Pz8RwYc4HnJd6F",
+                     *         "status": "processing"
+                     *       },
+                     *       "message": "Your export has started. Poll its status for the download link.",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: {
+                            /** @description Identifies this export. Pass it to **Get a contacts export**. */
+                            exportId?: string;
+                            /** @description Always `processing` when the export has just started. */
+                            status?: string;
+                        };
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+        };
+    };
+    getAContactsExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `exportId` returned by **Start a contacts export**. */
+                exportId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 200 OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": {
+                     *         "exportId": "api-20261013_141502-Vq3kT9xLm2Pz8RwYc4HnJd6F",
+                     *         "status": "ready",
+                     *         "downloadUrl": "https://api.letterhead.email/exports/eyJpdiI6Ik1rU3ZRbW...",
+                     *         "expiresAt": "2026-10-20T14:21:47+00:00"
+                     *       },
+                     *       "message": "Export status",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: {
+                            exportId?: string;
+                            /** @description `processing`, `ready`, `empty`, or `failed`. */
+                            status?: string;
+                            /** @description Present only when `status` is `ready`. The CSV's download link. */
+                            downloadUrl?: string;
+                            /** @description Present only when `status` is `ready`. When the download link stops working (ISO 8601). */
+                            expiresAt?: string;
+                        };
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+            /** @description No export with this `exportId` exists for your company, or it has expired. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -6373,7 +6638,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Repeatable. Return only these event types. One or more of `delivery`, `open`, `click`, `bounce`, `purchase`. Omit to return all five. */
-                "eventType[]"?: string;
+                "eventType[]"?: string[];
                 /** @description Free-text filter across the event's newsletter title and link URL. Max 255 characters. */
                 search?: string;
                 /** @description 1-based page number. Minimum 1. Defaults to 1. */
@@ -7266,7 +7531,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Repeatable. Return only these event types. One or more of `delivery`, `open`, `click`, `bounce`, `purchase`. Omit to return all five. */
-                "eventType[]"?: string;
+                "eventType[]"?: string[];
                 /** @description Free-text filter across the event's newsletter title and link URL. Max 255 characters. */
                 search?: string;
                 /** @description 1-based page number. Minimum 1. Defaults to 1. */
@@ -9118,7 +9383,7 @@ export interface operations {
                     "application/json": {
                         items?: {
                             uniqueId?: string;
-                            /** @description `running`, `finished`, or `errored`. */
+                            /** @description `running`, `finished`, `errored`, `needsFieldSetup` (the import is waiting for you to choose which columns that match no contact field to keep — see **Get an import's columns awaiting field setup**), or `cancelled` (it was cancelled while waiting, and nothing from the file was imported). */
                             status?: string;
                             fileName?: string | null;
                             startedByUserUniqueId?: string | null;
@@ -9216,6 +9481,152 @@ export interface operations {
                      * @example {
                      *       "items": null,
                      *       "message": "Import retry started.",
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": {
+                        items?: unknown;
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+        };
+    };
+    getAnImportColumnsAwaitingFieldSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The import's unique identifier, from **List subscriber imports**. */
+                importUniqueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 200 OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "column": "Neighborhood",
+                     *           "sampleValues": [
+                     *             "Riverside",
+                     *             "Old Town"
+                     *           ],
+                     *           "suggestedType": "text",
+                     *           "existingFieldLabel": null,
+                     *           "canKeep": true
+                     *         }
+                     *       ],
+                     *       "message": "Columns awaiting field setup retrieved.",
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": {
+                        items?: {
+                            /** @description The column's header, exactly as it appears in the file. Use it as `column` when answering. */
+                            column?: string;
+                            /** @description A few values from the file's first rows. */
+                            sampleValues?: string[];
+                            /** @description `text`, `number`, `boolean`, or `date`. When `existingFieldLabel` is set, this is that field's own type. */
+                            suggestedType?: string;
+                            /** @description The label of the custom field you already have with this column's name, which a kept column fills instead of creating a new one. `null` when there's no such field. */
+                            existingFieldLabel?: string | null;
+                            /** @description `false` when Letterhead already uses this name (for example `source`, `tags`, `phone`, or a channel slug), so the column can't be kept unless it is renamed in the file. */
+                            canKeep?: boolean;
+                        }[];
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+        };
+    };
+    keepColumnsAsCustomFieldsAndContinueAnImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The import's unique identifier, from **List subscriber imports**. */
+                importUniqueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "fields": [
+                 *         {
+                 *           "column": "Neighborhood",
+                 *           "type": "text"
+                 *         }
+                 *       ]
+                 *     }
+                 */
+                "application/json": {
+                    /** @description The columns to keep — at most 50, each column once. Send `[]` to skip every column. */
+                    fields: {
+                        /** @description The column's header, as returned by **Get an import's columns awaiting field setup**. */
+                        column: string;
+                        /** @description `text`, `number`, `boolean`, or `date`. Ignored when the column fills a custom field you already have. */
+                        type: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Import resumed. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": null,
+                     *       "message": "Import resumed.",
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": {
+                        items?: unknown;
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+        };
+    };
+    cancelAnImportAwaitingFieldSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The import's unique identifier, from **List subscriber imports**. */
+                importUniqueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import cancelled. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": null,
+                     *       "message": "Import cancelled.",
                      *       "total": 1
                      *     }
                      */
@@ -10292,7 +10703,7 @@ export interface operations {
         parameters: {
             query: {
                 /** @description `string[]` | An array of channel identifiers (or channel "slugs"). */
-                "channels[]": string;
+                "channels[]": string[];
             };
             header?: never;
             path?: never;
@@ -11576,9 +11987,11 @@ export interface operations {
                     url: string;
                     /**
                      * @description `string[]` | An array of channel identifiers (or channel "slugs") across which to create a curation. Optional — on a new curation, omit it to share the curation with every channel in the company; on a resubmission, omitting it keeps the existing sharing, and passing it replaces that sharing.
-                     * @example letterhead-example-newsletter
+                     * @example [
+                     *       "letterhead-example-newsletter"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     /** @description `html` content for the curation, only `p` and formatting elements are allowed. */
                     content?: string;
                     /** @description Plain text excerpt of the curated content. Saved as provided — this endpoint does not fetch or crawl the URL for one. */
@@ -11597,12 +12010,40 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Curation created (or updated, if a curation for the same `url` already existed). */
+            /** @description Curation created (or updated, if a curation for the same `url` already existed). The saved curation is returned in `items`; use its `uniqueId` with the other curation endpoints. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @description The saved curation. */
+                        items?: {
+                            uniqueId?: string;
+                            title?: string;
+                            excerpt?: string;
+                            content?: string;
+                            author?: string;
+                            siteName?: string;
+                            originalUrl?: string;
+                            image?: string;
+                            imageAlt?: string;
+                            imageCaption?: string;
+                            source?: string;
+                            type?: number;
+                            curated?: boolean;
+                            feedUniqueId?: string;
+                            publicationDate?: string;
+                            createdAt?: string;
+                            updatedAt?: string;
+                            tags?: string[];
+                        };
+                        /** @example Curation created. */
+                        message?: string;
+                        /** @example 1 */
+                        total?: number;
+                    };
+                };
             };
         };
     };
@@ -11689,9 +12130,11 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * @description `string[]` | An array of channel identifiers (or channel "slugs") across which to create a curation.
-                     * @example letterhead-example-newsletter
+                     * @example [
+                     *       "letterhead-example-newsletter"
+                     *     ]
                      */
-                    "channels[]": string;
+                    "channels[]": string[];
                     /**
                      * @description The number of articles you want Letterhead to try to curate for you. Minimum 1, maximum 10.
                      * @example 1
@@ -15595,9 +16038,11 @@ export interface operations {
                     to: string;
                     /**
                      * @description `string[]` | Optionally filter your metrics with a list of channels (by their identifiers).
-                     * @example an-example-channel
+                     * @example [
+                     *       "an-example-channel"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     /**
                      * @description Change sort direction by optionally specifying "asc" or "desc." Descending is default.
                      * @example desc
@@ -16010,9 +16455,11 @@ export interface operations {
                     to: string;
                     /**
                      * @description `string[]` | Optionally filter to a list of channels (by their slugs).
-                     * @example an-example-channel
+                     * @example [
+                     *       "an-example-channel"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     /**
                      * @description Pass `channel` to include a per-channel breakdown.
                      * @example channel
@@ -16513,9 +16960,11 @@ export interface operations {
                     to: string;
                     /**
                      * @description `string[]` | Optionally filter to a list of channels (by their slugs).
-                     * @example an-example-channel
+                     * @example [
+                     *       "an-example-channel"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     /**
                      * @description Page number. Defaults to 1.
                      * @example 1
@@ -16619,9 +17068,11 @@ export interface operations {
                     to: string;
                     /**
                      * @description `string[]` | Optionally filter to a list of channels (by their slugs).
-                     * @example an-example-channel
+                     * @example [
+                     *       "an-example-channel"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     /**
                      * @description Page number. Defaults to 1.
                      * @example 1
@@ -16731,9 +17182,11 @@ export interface operations {
                     to: string;
                     /**
                      * @description `string[]` | Optionally filter to a list of channels (by their slugs).
-                     * @example an-example-channel
+                     * @example [
+                     *       "an-example-channel"
+                     *     ]
                      */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                 };
             };
         };
@@ -16828,6 +17281,82 @@ export interface operations {
                         total?: number;
                     };
                 };
+            };
+        };
+    };
+    exportAReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "reportType": 2,
+                 *       "from": "2026-09-01",
+                 *       "to": "2026-09-30",
+                 *       "channels": [
+                 *         "morning-brief",
+                 *         "weekend-edition"
+                 *       ],
+                 *       "recipients": [
+                 *         "data-team@example.com"
+                 *       ]
+                 *     }
+                 */
+                "application/json": {
+                    /**
+                     * @description Which report to build — `1` clicks, `2` engagement, `3` growth.
+                     * @enum {integer}
+                     */
+                    reportType: 1 | 2 | 3;
+                    /**
+                     * Format: date
+                     * @description First day of the range, as `YYYY-MM-DD`.
+                     */
+                    from: string;
+                    /**
+                     * Format: date
+                     * @description Last day of the range, as `YYYY-MM-DD`. Must be on or after `from`.
+                     */
+                    to: string;
+                    /** @description The slugs of the newsletters to include. No duplicates. */
+                    channels: string[];
+                    /** @description The email addresses to send the download link to, up to 25. No duplicates. */
+                    recipients: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description The export was queued. The download link arrives by email. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [],
+                     *       "message": "Report export started.",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: unknown[];
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+            /** @description A required field is missing or invalid — for example, an unknown `reportType`, a `to` date before `from`, or more than 25 recipients. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -17473,7 +18002,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Channel slug to restrict the rollup to. Repeat the parameter once per channel. Omit for every channel. */
-                "channels[]"?: string;
+                "channels[]"?: string[];
                 /** @description Start of the window (inclusive). Defaults to 90 days ago. */
                 from?: string;
                 /** @description End of the window (inclusive). Defaults to now. The window cannot exceed 90 days. */
@@ -19097,7 +19626,7 @@ export interface operations {
                     /** @description **required** | The intended subscription status of your audience member. Letterhead will try to protect against accidental status changes, so this needs to be used in conjunction with `allowStatusOverride`. */
                     channelSubscriberStatus?: string;
                     /** @description **required** `string[]`| The slug or the unique identifier of a channel belonging to your organization. */
-                    "channels[]"?: string;
+                    "channels[]"?: string[];
                     children?: string;
                     city?: string;
                     contentTopics?: string;

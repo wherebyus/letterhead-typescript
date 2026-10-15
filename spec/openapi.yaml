@@ -35,61 +35,37 @@ tags:
   - name: Contacts
     description: Contacts are your audience across your whole company — the people you send to, their
       subscriptions, tags, and how they engage.
-    x-lastAudited: '2026-09-09'
-    x-lastAuditedBy: docs-audit-loop
   - name: Segments
     description: Segments are saved groups of contacts you can target and report on.
-    x-lastAudited: '2026-10-08'
-    x-lastAuditedBy: docs-audit-loop
   - name: Letters
     description: A letter is a single edition of a newsletter. These endpoints let you draft, update,
       retrieve, and send them, and read how letters and subject lines performed.
-    x-lastAudited: '2026-09-10'
-    x-lastAuditedBy: docs-audit-loop
   - name: Curations
     description: Curations let you gather content from around the web and distribute it across one or
       more of your newsletters.
-    x-lastAudited: '2026-09-05'
-    x-lastAuditedBy: docs-audit-loop
   - name: Promotions
     description: Promotions are the paid placements you run inside your newsletters.
-    x-lastAudited: '2026-09-07'
-    x-lastAuditedBy: docs-audit-loop
   - name: Channels
     description: A channel is a single newsletter. Every subscriber, letter, and curation belongs to one.
-    x-lastAudited: '2026-09-04'
-    x-lastAuditedBy: docs-audit-loop
   - name: Metrics
     description: How your sending is performing — the totals and daily figures behind opens, clicks, bounces,
       and unsubscribes.
-    x-lastAudited: '2026-09-08'
-    x-lastAuditedBy: docs-audit-loop
   - name: Automations
     description: Automations send a sequence of emails on their own once someone qualifies for it. These
       endpoints let you change the template an automation uses and restart one that has stopped.
-    x-lastAudited: '2026-09-06'
-    x-lastAuditedBy: docs-audit-loop
   - name: Transactional Email
     description: Transactional emails are one-off messages to an individual, such as a password reset
       or a purchase confirmation. This service is available on request and needs a dedicated sending IP.
-    x-lastAudited: '2026-09-30'
-    x-lastAuditedBy: docs-audit-loop
   - name: Teams
     description: The people who have access to your Letterhead account, and the API for inviting,
       updating, and removing them.
-    x-lastAudited: '2026-09-11'
-    x-lastAuditedBy: docs-audit-loop
   - name: Agents
     description: Agents review a letter before it goes out and report what they find. Preflight agents
       are available today; Analyze agents may need to be enabled for your account — contact support if
       you don't see them.
-    x-lastAudited: '2026-10-02'
-    x-lastAuditedBy: docs-audit-loop
   - name: Links
     description: The links inside your letters and the categories they fall into. These endpoints are in development and not
       yet available.
-    x-lastAudited: '2026-09-03'
-    x-lastAuditedBy: docs-audit-loop
 paths:
   /api/v3/contacts/overview:
     get:
@@ -631,7 +607,9 @@ paths:
             per newsletter — between 2 and 5 in total, and each must be distinct.
           required: true
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: api
           in: query
           description: Set to `true` to receive the JSON API response.
@@ -1109,6 +1087,179 @@ paths:
                   totalRelation: eq
                 message: Contacts retrieved.
                 total: 842
+  /api/v3/contacts/export:
+    post:
+      tags:
+        - Contacts
+      summary: Start a contacts export
+      description: |-
+        Starts a CSV export of every contact that matches your filters, built in the background. The request returns straight away with an `exportId`; poll **Get a contacts export** with it until the status is `ready`, then download the file from the `downloadUrl` it returns. Each download link works for 7 days.
+
+        The file has one row per contact: first name, last name, and email, then one column per custom field you've defined, then the contact's tags (separated by `|`), then one column per newsletter, headed with its slug, holding `1` when the contact is subscribed to it. Engagement and date-added columns aren't included — use **Browse contacts with filters** for those.
+
+        It takes the same filters as **Browse contacts with filters**, so you can try a filter there before exporting. Send an empty body to export your whole audience. Larger audiences take longer to build, so poll every minute or so rather than continuously.
+
+        This is a company-level (v3) request. Authenticate with a company API key as a Bearer token.
+      operationId: startAContactsExport
+      parameters:
+        - name: api
+          in: query
+          description: Required. Set to `true`.
+          required: true
+          schema:
+            type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: Free-text search across email, first name, and last name. Max 500 characters.
+                channel:
+                  type: string
+                  description: Export only the contacts of this one newsletter, by its identifier (slug).
+                statuses:
+                  type: array
+                  items:
+                    type: integer
+                  description: Restrict to contacts whose subscription status is one of these values.
+                    See the subscription status table on **Add or update subscriptions in bulk**.
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Restrict to contacts carrying any of these tags.
+                untagged:
+                  type: boolean
+                  description: Restrict to contacts with no tags at all. Mutually exclusive with a non-empty
+                    `tags`.
+                customFields:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        description: The custom field's name.
+                      op:
+                        type: string
+                        description: '`eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`, or `exists`.'
+                      value:
+                        description: Comparison value. Omit when `op` is `exists`.
+                  description: Typed custom-field comparisons, AND'd together with the rest of the filter.
+                segmentId:
+                  type: integer
+                  description: A saved segment (see **List segments**) whose criteria are AND-merged
+                    with the rest of this filter set.
+                createdAtFrom:
+                  type: string
+                  description: Restrict to contacts created on or after this date (inclusive). Date-only
+                    (`YYYY-MM-DD`) or a full ISO 8601 timestamp.
+                createdAtTo:
+                  type: string
+                  description: Restrict to contacts created on or before this date (inclusive).
+            example:
+              channel: the-morning-brief
+              statuses:
+                - 1
+      responses:
+        '202':
+          description: The export has started. Poll **Get a contacts export** with the returned `exportId`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: object
+                    properties:
+                      exportId:
+                        type: string
+                        description: Identifies this export. Pass it to **Get a contacts export**.
+                      status:
+                        type: string
+                        description: Always `processing` when the export has just started.
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items:
+                  exportId: api-20261013_141502-Vq3kT9xLm2Pz8RwYc4HnJd6F
+                  status: processing
+                message: Your export has started. Poll its status for the download link.
+                total: 0
+  /api/v3/contacts/exports/{exportId}:
+    get:
+      tags:
+        - Contacts
+      summary: Get a contacts export
+      description: |-
+        Returns where an export started with **Start a contacts export** stands, and its download link once it's ready.
+
+        `status` is one of:
+
+        - `processing` — still being built. Ask again in a minute or so.
+        - `ready` — done. Download the CSV from `downloadUrl` before `expiresAt`, 7 days after it was built.
+        - `empty` — your filters matched no contacts, so there's no file.
+        - `failed` — the export couldn't be completed. Start a new one; if it fails again, contact support.
+
+        An export can be looked up for 7 days after it starts. After that, or for an `exportId` that isn't yours, this returns 404.
+
+        This is a company-level (v3) read. Authenticate with a company API key as a Bearer token.
+      operationId: getAContactsExport
+      parameters:
+        - name: exportId
+          in: path
+          description: The `exportId` returned by **Start a contacts export**.
+          required: true
+          schema:
+            type: string
+        - name: api
+          in: query
+          description: Required. Set to `true`.
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: object
+                    properties:
+                      exportId:
+                        type: string
+                      status:
+                        type: string
+                        description: '`processing`, `ready`, `empty`, or `failed`.'
+                      downloadUrl:
+                        type: string
+                        description: Present only when `status` is `ready`. The CSV's download link.
+                      expiresAt:
+                        type: string
+                        description: Present only when `status` is `ready`. When the download link stops
+                          working (ISO 8601).
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items:
+                  exportId: api-20261013_141502-Vq3kT9xLm2Pz8RwYc4HnJd6F
+                  status: ready
+                  downloadUrl: https://api.letterhead.email/exports/eyJpdiI6Ik1rU3ZRbW...
+                  expiresAt: '2026-10-20T14:21:47+00:00'
+                message: Export status
+                total: 0
+        '404':
+          description: No export with this `exportId` exists for your company, or it has expired.
   /api/v3/contacts/tags:
     post:
       tags:
@@ -2139,7 +2290,9 @@ paths:
             `bounce`, `purchase`. Omit to return all five.
           required: false
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: search
           in: query
           description: Free-text filter across the event's newsletter title and link URL. Max 255 characters.
@@ -3275,7 +3428,9 @@ paths:
             `bounce`, `purchase`. Omit to return all five.
           required: false
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: search
           in: query
           description: Free-text filter across the event's newsletter title and link URL. Max 255 characters.
@@ -6186,7 +6341,7 @@ paths:
                           type: string
                         status:
                           type: string
-                          description: '`running`, `finished`, or `errored`.'
+                          description: '`running`, `finished`, `errored`, `needsFieldSetup` (the import is waiting for you to choose which columns that match no contact field to keep — see **Get an import''s columns awaiting field setup**), or `cancelled` (it was cancelled while waiting, and nothing from the file was imported).'
                         fileName:
                           type: string
                           nullable: true
@@ -6341,6 +6496,179 @@ paths:
               example:
                 items: null
                 message: Import retry started.
+                total: 1
+    parameters:
+      - name: importUniqueId
+        in: path
+        required: true
+        description: The import's unique identifier, from **List subscriber imports**.
+        schema:
+          type: string
+  /api/v3/contacts/imports/{importUniqueId}/field-setup:
+    get:
+      tags:
+        - Contacts
+      summary: Get an import's columns awaiting field setup
+      description: |-
+        For an import whose status is `needsFieldSetup`, lists the columns in its file that match no contact field, each with a few example values from the file and a suggested custom-field type. Answer with **Keep columns as custom fields and continue an import**, or cancel with **Cancel an import awaiting field setup**.
+
+        Returns `409` when the import is no longer waiting on field setup, and `422` when its upload has expired (import the file again).
+
+        This is a company-level (v3) read. Authenticate with a company API key as a Bearer token.
+      operationId: getAnImportColumnsAwaitingFieldSetup
+      parameters:
+        - name: api
+          in: query
+          description: Required. Set to `true`.
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 200 OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        column:
+                          type: string
+                          description: The column's header, exactly as it appears in the file. Use it as `column` when answering.
+                        sampleValues:
+                          type: array
+                          items:
+                            type: string
+                          description: A few values from the file's first rows.
+                        suggestedType:
+                          type: string
+                          description: '`text`, `number`, `boolean`, or `date`. When `existingFieldLabel` is set, this is that field''s own type.'
+                        existingFieldLabel:
+                          type: string
+                          nullable: true
+                          description: The label of the custom field you already have with this column's name, which a kept column fills instead of creating a new one. `null` when there's no such field.
+                        canKeep:
+                          type: boolean
+                          description: '`false` when Letterhead already uses this name (for example `source`, `tags`, `phone`, or a channel slug), so the column can''t be kept unless it is renamed in the file.'
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items:
+                  - column: Neighborhood
+                    sampleValues:
+                      - Riverside
+                      - Old Town
+                    suggestedType: text
+                    existingFieldLabel: null
+                    canKeep: true
+                message: Columns awaiting field setup retrieved.
+                total: 1
+    post:
+      tags:
+        - Contacts
+      summary: Keep columns as custom fields and continue an import
+      description: |-
+        Answers an import whose status is `needsFieldSetup`. Each entry in `fields` keeps one column: Letterhead creates a custom field named after the column (or uses the custom field you already have with that name) and the import fills it. Every other column the import stopped on is skipped. Send an empty `fields` array to skip them all. Returns `202 Accepted` — the import continues asynchronously.
+
+        A kept cell that doesn't fit its field's type is left out of that contact, and the contact still imports. Where another mapped column already feeds the same field, its value wins on each row.
+
+        Returns `409` when the import is no longer waiting on field setup (it was already answered or cancelled), and `422` — changing nothing — when the upload has expired, a column isn't one the import stopped on, two columns would become one field, or a column's name is one Letterhead already uses.
+
+        This is a company-level (v3) write. Authenticate with a company API key as a Bearer token.
+      operationId: keepColumnsAsCustomFieldsAndContinueAnImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api:
+                  type: boolean
+                  description: Required. Set to `true` to authenticate with an API key.
+                fields:
+                  type: array
+                  maxItems: 50
+                  description: The columns to keep — at most 50, each column once. Send `[]` to skip every column.
+                  items:
+                    type: object
+                    properties:
+                      column:
+                        type: string
+                        description: The column's header, as returned by **Get an import's columns awaiting field setup**.
+                      type:
+                        type: string
+                        description: '`text`, `number`, `boolean`, or `date`. Ignored when the column fills a custom field you already have.'
+                    required:
+                      - column
+                      - type
+              required:
+                - api
+                - fields
+            example:
+              api: true
+              fields:
+                - column: Neighborhood
+                  type: text
+      responses:
+        '202':
+          description: Import resumed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    nullable: true
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items: null
+                message: Import resumed.
+                total: 1
+    delete:
+      tags:
+        - Contacts
+      summary: Cancel an import awaiting field setup
+      description: |-
+        Cancels an import whose status is `needsFieldSetup`. Its status becomes `cancelled`. Nothing from the file had been imported, so nothing is undone. Works even when the upload has expired.
+
+        Returns `409` when the import is no longer waiting on field setup.
+
+        This is a company-level (v3) write. Authenticate with a company API key as a Bearer token.
+      operationId: cancelAnImportAwaitingFieldSetup
+      parameters:
+        - name: api
+          in: query
+          description: Required. Set to `true` to authenticate with an API key.
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Import cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    nullable: true
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items: null
+                message: Import cancelled.
                 total: 1
     parameters:
       - name: importUniqueId
@@ -7837,8 +8165,10 @@ paths:
           description: '`string[]` | An array of channel identifiers (or channel "slugs").'
           required: true
           schema:
-            type: string
-            example: letterhead-example-newsletter
+            type: array
+            items:
+              type: string
+              example: letterhead-example-newsletter
       responses:
         '200':
           description: 200 Active templates
@@ -9472,12 +9802,15 @@ paths:
                     not fetch or crawl the URL for Open Graph data.
                   example: https://letterhead.ai
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | An array of channel identifiers (or channel "slugs") across
                     which to create a curation. Optional — on a new curation, omit it to share the curation
                     with every channel in the company; on a resubmission, omitting it keeps the existing
                     sharing, and passing it replaces that sharing.'
-                  example: letterhead-example-newsletter
+                  example:
+                    - letterhead-example-newsletter
                 content:
                   type: string
                   description: '`html` content for the curation, only `p` and formatting elements are
@@ -9509,6 +9842,61 @@ paths:
       responses:
         '201':
           description: Curation created (or updated, if a curation for the same `url` already existed).
+            The saved curation is returned in `items`; use its `uniqueId` with the other curation
+            endpoints.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: object
+                    description: The saved curation.
+                    properties:
+                      uniqueId:
+                        type: string
+                      title:
+                        type: string
+                      excerpt:
+                        type: string
+                      content:
+                        type: string
+                      author:
+                        type: string
+                      siteName:
+                        type: string
+                      originalUrl:
+                        type: string
+                      image:
+                        type: string
+                      imageAlt:
+                        type: string
+                      imageCaption:
+                        type: string
+                      source:
+                        type: string
+                      type:
+                        type: integer
+                      curated:
+                        type: boolean
+                      feedUniqueId:
+                        type: string
+                      publicationDate:
+                        type: string
+                      createdAt:
+                        type: string
+                      updatedAt:
+                        type: string
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                  message:
+                    type: string
+                    example: Curation created.
+                  total:
+                    type: integer
+                    example: 1
     get:
       tags:
         - Curations
@@ -9802,10 +10190,13 @@ paths:
                     session.
                   example: 'true'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | An array of channel identifiers (or channel "slugs") across
                     which to create a curation.'
-                  example: letterhead-example-newsletter
+                  example:
+                    - letterhead-example-newsletter
                 count:
                   type: string
                   description: The number of articles you want Letterhead to try to curate for you. Minimum
@@ -14988,10 +15379,13 @@ paths:
                   description: Period end date (inclusive), must be >= `from`, max 90 days.
                   example: '2026-03-26'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | Optionally filter your metrics with a list of channels (by
                     their identifiers).'
-                  example: an-example-channel
+                  example:
+                    - an-example-channel
                 direction:
                   type: string
                   description: Change sort direction by optionally specifying "asc" or "desc." Descending
@@ -15381,9 +15775,12 @@ paths:
                   description: Period end date (inclusive), must be >= `from`.
                   example: '2026-03-26'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | Optionally filter to a list of channels (by their slugs).'
-                  example: an-example-channel
+                  example:
+                    - an-example-channel
                 groupBy:
                   type: string
                   description: Pass `channel` to include a per-channel breakdown.
@@ -16042,9 +16439,12 @@ paths:
                   description: Period end date (inclusive), must be >= `from`.
                   example: '2026-03-26'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | Optionally filter to a list of channels (by their slugs).'
-                  example: an-example-channel
+                  example:
+                    - an-example-channel
                 page:
                   type: string
                   description: Page number. Defaults to 1.
@@ -16160,9 +16560,12 @@ paths:
                   description: Period end date (inclusive), must be >= `from`.
                   example: '2026-03-26'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | Optionally filter to a list of channels (by their slugs).'
-                  example: an-example-channel
+                  example:
+                    - an-example-channel
                 page:
                   type: string
                   description: Page number. Defaults to 1.
@@ -16287,9 +16690,12 @@ paths:
                   description: Period end date (inclusive), must be >= `from`.
                   example: '2026-03-26'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '`string[]` | Optionally filter to a list of channels (by their slugs).'
-                  example: an-example-channel
+                  example:
+                    - an-example-channel
               required:
                 - api
                 - from
@@ -16388,6 +16794,105 @@ paths:
                 items: []
                 message: Content topic share is not enabled.
                 total: 0
+  /api/v3/reports/export:
+    post:
+      tags:
+        - Metrics
+      summary: Export a report by email
+      description: |-
+        Builds a CSV report across the newsletters and date range you choose, then emails a download link to each recipient. The request returns as soon as the export is queued; the file arrives by email, usually within a few minutes. Each download link works for 7 days.
+
+        Choose the report with `reportType`:
+
+        - `1` — **Clicks.** One row per link per edition: URL, total clicks, unique clicks, the edition, its letter ID, and the newsletter.
+        - `2` — **Engagement.** One row per edition published in the range: sent, delivered, accepted, bounces (hard and soft, with rates), total opens, unique opens, unique confirmed opens, total clicks, unique clicks, and unsubscribes.
+        - `3` — **Growth.** One row per newsletter: total audience, subscribers, new subscribers, not subscribed, pending opt-in, unsubscribed, and cleaned, plus the size of each engagement group (Loyalists, New & Engaged, Casual, Fading, Ghosts, Single Newsletter) and how much each changed over the range.
+
+        These are rolled-up figures per edition, per link, or per newsletter. They don't list individual contacts — to read one contact's engagement, use **Get a contact's engagement breakdown**.
+
+        `from` and `to` are calendar days and both are included in full.
+
+        This is a company-level (v3) request. Authenticate with a company API key as a Bearer token.
+      operationId: exportAReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                api:
+                  type: boolean
+                  description: Required. Set to `true` to authenticate with an API key.
+                reportType:
+                  type: integer
+                  enum:
+                    - 1
+                    - 2
+                    - 3
+                  description: Which report to build — `1` clicks, `2` engagement, `3` growth.
+                from:
+                  type: string
+                  format: date
+                  description: First day of the range, as `YYYY-MM-DD`.
+                to:
+                  type: string
+                  format: date
+                  description: Last day of the range, as `YYYY-MM-DD`. Must be on or after `from`.
+                channels:
+                  type: array
+                  minItems: 1
+                  description: The slugs of the newsletters to include. No duplicates.
+                  items:
+                    type: string
+                    maxLength: 255
+                recipients:
+                  type: array
+                  minItems: 1
+                  maxItems: 25
+                  description: The email addresses to send the download link to, up to 25. No duplicates.
+                  items:
+                    type: string
+                    format: email
+                    maxLength: 255
+              required:
+                - api
+                - reportType
+                - from
+                - to
+                - channels
+                - recipients
+            example:
+              api: true
+              reportType: 2
+              from: '2026-09-01'
+              to: '2026-09-30'
+              channels:
+                - morning-brief
+                - weekend-edition
+              recipients:
+                - data-team@example.com
+      responses:
+        '200':
+          description: The export was queued. The download link arrives by email.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {}
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items: []
+                message: Report export started.
+                total: 0
+        '400':
+          description: A required field is missing or invalid — for example, an unknown `reportType`, a `to` date before `from`, or more than 25 recipients.
   /api/v3/automations:
     get:
       tags:
@@ -17252,7 +17757,9 @@ paths:
             Omit for every channel.
           required: false
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: from
           in: query
           description: Start of the window (inclusive). Defaults to 90 days ago.
@@ -19346,7 +19853,9 @@ paths:
                     Letterhead will try to protect against accidental status changes, so this needs to
                     be used in conjunction with `allowStatusOverride`.'
                 channels[]:
-                  type: string
+                  type: array
+                  items:
+                    type: string
                   description: '**required** `string[]`| The slug or the unique identifier of a channel
                     belonging to your organization.'
                 children:
