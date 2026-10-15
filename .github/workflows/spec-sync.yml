@@ -8,6 +8,10 @@ on:
     - cron: '17 6 * * *'
   workflow_dispatch:
 
+# One run at a time; a manual run waits for the scheduled one instead of racing it.
+concurrency:
+  group: spec-sync
+
 permissions:
   contents: write
   pull-requests: write
@@ -15,8 +19,12 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
+      # The write token is not left on disk while dependencies and the generator run; only the last step gets it.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -40,20 +48,31 @@ jobs:
           npm test
           npm run build
           npm run test:dist
-      - name: Open a pull request
+      - name: Open or update the pull request
         if: steps.changed.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          branch="spec-sync/$(date -u +%Y-%m-%d)"
+          # One fixed branch, written only by this workflow, so an unmerged pull request is updated rather than
+          # joined by a new one every day.
+          branch="spec-sync"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
           git add spec src/generated
           git commit -m "feat(sdk): pick up API changes from the published spec"
-          git push --force-with-lease origin "$branch"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" "$branch"
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
             gh pr create --base main --head "$branch" \
               --title "feat(sdk): pick up API changes from the published spec" \
               --body "The published API description changed. This regenerates the types and methods from it; the workflow already ran typecheck, tests, build and the package smoke test. Pull requests opened by a workflow do not start CI on their own, so close and reopen this one to run it before merging."
           fi
+      - name: Close a pull request the spec no longer needs
+        if: steps.changed.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for number in $(gh pr list --head spec-sync --state open --json number --jq '.[].number'); do
+            gh pr close "$number" --comment "The published spec now matches main, so there is nothing to sync."
+          done

@@ -12,5 +12,11 @@ regenerated types and methods when it changed. To do the same by hand, run `npm 
 `npm run spec:pull -- <path>` to copy a file), then `npm run generate`, and commit both together; CI fails if
 they disagree.
 
+The sync workflow keeps one pull request, on the `spec-sync` branch, up to date, and closes it if the spec
+returns to matching `main`. It needs "Allow GitHub Actions to create and approve pull requests" turned on in the
+repository's Actions settings. A pull request a workflow opens does not start CI on its own: close and reopen it
+to run CI before merging. GitHub pauses scheduled workflows in a repository with no activity for 60 days, so
+re-enable it under Actions if it stops.
+
 To release, bump `version` in `package.json`, merge, and push a matching tag (`v1.2.3`). The Publish workflow
 publishes to npm through Trusted Publishing, so no token is needed.
