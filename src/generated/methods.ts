@@ -20,6 +20,10 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
       call('POST', "/api/v3/contacts/search", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'searchContacts'>>,
     browseContactsWithFilters: (...args: OperationArgList<'browseContactsWithFilters'>) =>
       call('POST', "/api/v3/contacts/browse", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'browseContactsWithFilters'>>,
+    startAContactsExport: (...args: OperationArgList<'startAContactsExport'>) =>
+      call('POST', "/api/v3/contacts/export", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'startAContactsExport'>>,
+    getAContactsExport: (...args: OperationArgList<'getAContactsExport'>) =>
+      call('GET', "/api/v3/contacts/exports/{exportId}", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'getAContactsExport'>>,
     listTags: (...args: OperationArgList<'listTags'>) =>
       call('GET', "/api/v3/contacts/tags", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'listTags'>>,
     createATag: (...args: OperationArgList<'createATag'>) =>
@@ -100,6 +104,12 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
       call('GET', "/api/v3/contacts/imports/{importUniqueId}/errors", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'listASubscriberImportFailedRows'>>,
     retryASubscriberImport: (...args: OperationArgList<'retryASubscriberImport'>) =>
       call('POST', "/api/v3/contacts/imports/{importUniqueId}/retry", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'retryASubscriberImport'>>,
+    getAnImportColumnsAwaitingFieldSetup: (...args: OperationArgList<'getAnImportColumnsAwaitingFieldSetup'>) =>
+      call('GET', "/api/v3/contacts/imports/{importUniqueId}/field-setup", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'getAnImportColumnsAwaitingFieldSetup'>>,
+    keepColumnsAsCustomFieldsAndContinueAnImport: (...args: OperationArgList<'keepColumnsAsCustomFieldsAndContinueAnImport'>) =>
+      call('POST', "/api/v3/contacts/imports/{importUniqueId}/field-setup", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'keepColumnsAsCustomFieldsAndContinueAnImport'>>,
+    cancelAnImportAwaitingFieldSetup: (...args: OperationArgList<'cancelAnImportAwaitingFieldSetup'>) =>
+      call('DELETE', "/api/v3/contacts/imports/{importUniqueId}/field-setup", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'cancelAnImportAwaitingFieldSetup'>>,
     listCustomFieldDefinitions: (...args: OperationArgList<'listCustomFieldDefinitions'>) =>
       call('GET', "/api/v3/contacts/custom-fields", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'listCustomFieldDefinitions'>>,
     createACustomFieldDefinition: (...args: OperationArgList<'createACustomFieldDefinition'>) =>
@@ -354,6 +364,8 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
       call('POST', "/api/v3/metrics/clicks/topics", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'getTopicClicks'>>,
     getTopicShareOverview: (...args: OperationArgList<'getTopicShareOverview'>) =>
       call('POST', "/api/v3/metrics/clicks/topic-share", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'getTopicShareOverview'>>,
+    exportAReport: (...args: OperationArgList<'exportAReport'>) =>
+      call('POST', "/api/v3/reports/export", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'exportAReport'>>,
   },
   automations: {
     listAutomations: (...args: OperationArgList<'listAutomations'>) =>
