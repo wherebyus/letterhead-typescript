@@ -1,5 +1,7 @@
 import createClientExport, { defaultBodySerializer, type Client, type Middleware } from 'openapi-fetch';
 import type { operations, paths } from './generated/schema';
+import { createGeneratedMethods } from './generated/methods';
+import type { RequestCaller } from './operations';
 
 // openapi-fetch's CommonJS build sets `exports.default` without an `__esModule` marker, so in our CommonJS output
 // the default import resolves to the whole module object rather than the function. Fall back to its `default`.
@@ -85,6 +87,35 @@ const withApiFlag = (body: unknown): unknown => {
 const serializeBodyWithApiFlag = (body: unknown, headers?: unknown): unknown =>
   (defaultBodySerializer as (body: unknown, headers?: unknown) => unknown)(withApiFlag(body), headers);
 
+// The form endpoints take form fields. Arrays become repeated fields (so a `channels[]` key reaches the API as the
+// list it is), files pass through, and anything else nested is sent as JSON text.
+// The API reads a form boolean as 1 or 0 ("false" fails its boolean check).
+const formValue = (item: unknown): string | Blob => {
+  if (item instanceof Blob || typeof item === 'string') {
+    return item;
+  }
+  if (typeof item === 'boolean') {
+    return item ? '1' : '0';
+  }
+  return typeof item === 'object' ? JSON.stringify(item) : String(item);
+};
+
+const toFormData = (body: unknown): FormData => {
+  if (body instanceof FormData) {
+    return body;
+  }
+  const form = new FormData();
+  for (const [name, value] of Object.entries(body as Record<string, unknown>)) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (item === undefined || item === null) {
+        continue;
+      }
+      form.append(name, formValue(item));
+    }
+  }
+  return form;
+};
+
 const unwrap = <Data>(result: { data?: Data; error?: unknown; response: Response }): Data => {
   if (result.error !== undefined || !result.response.ok) {
     throw new LetterheadError(result.response.status, result.error);
@@ -108,7 +139,31 @@ export const createLetterheadClient = (options: LetterheadOptions) => {
   });
   raw.use(apiFlagMiddleware);
 
+  type LooseRequest = (
+    path: string,
+    init: { params: { path?: unknown; query?: unknown }; body?: unknown; parseAs: 'json' | 'text' | 'blob' },
+  ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
+
+  // Every operation in the spec becomes a method (see scripts/generate.mjs); this is the one place they all call.
+  const call: RequestCaller = async (method, path, args, options) => {
+    const { path: pathParameters, query, body } = (args ?? {}) as { path?: unknown; query?: unknown; body?: unknown };
+    const request = raw[method] as unknown as LooseRequest;
+    // An operation that takes a body gets one even when the caller has nothing to add, so the api flag has
+    // somewhere to ride.
+    const hasBody = body !== undefined || options.sendsBody;
+    const sentBody = options.multipart ? toFormData(body ?? {}) : (body ?? {});
+    return unwrap(
+      await request(path, {
+        params: { path: pathParameters, query },
+        parseAs: options.parseAs,
+        ...(hasBody ? { body: sentBody } : {}),
+      }),
+    );
+  };
+  const generated = createGeneratedMethods(call);
+
   const contacts = {
+    ...generated.contacts,
     /** Create a contact, or update the one with the same email. Pass `tags` to tag them in the same call. */
     upsert: async (contact: JsonBody<'createOrUpdateAContact'>) =>
       unwrap(await raw.POST('/api/v3/contacts', { body: contact })),
@@ -138,6 +193,7 @@ export const createLetterheadClient = (options: LetterheadOptions) => {
   };
 
   const letters = {
+    ...generated.letters,
     list: async (query?: Query<'listAllLetters'>) => unwrap(await raw.GET('/api/v3/letters', { params: { query } })),
     get: async (letterUuid: string) =>
       unwrap(await raw.GET('/api/v3/letters/{letterUuid}', { params: { path: { letterUuid } } })),
@@ -148,7 +204,9 @@ export const createLetterheadClient = (options: LetterheadOptions) => {
       unwrap(await raw.DELETE('/api/v3/letters/{letterUuid}', { params: { path: { letterUuid } } })),
   };
 
-  return { contacts, tags, letters, raw };
+  // The generated groups are the full surface, named for each operation. `contacts`, `tags` and `letters` keep the
+  // shorter hand-written names alongside them.
+  return { ...generated, contacts, tags, letters, raw };
 };
 
 export type LetterheadClient = ReturnType<typeof createLetterheadClient>;

@@ -9,9 +9,14 @@ is public: never name or link a private Letterhead repository, project, or inter
   describes. A wrong type is fixed in the published spec, then copied in and regenerated here.
 - **The `api=true` flag is the SDK's job.** The generator strips it from the types and `src/client.ts` adds
   it to every request. Keep both halves in step.
-- **Resource methods** (`contacts`, `tags`, `letters`) are a small curated layer over `raw`: one line each,
-  typed from the generated `operations`, throwing `LetterheadError` on an error status. Anything not wrapped is
-  still reachable through `raw`.
+- **Every operation gets a method, generated from the spec.** `scripts/generate.mjs` writes
+  `src/generated/methods.ts`: one method per operation, grouped by the spec's first tag and named by
+  `operationId`, taking `{ path, query, body }` and throwing `LetterheadError` on an error status. A new endpoint
+  in the spec is a new method the next time the spec is pulled and generated; never hand-write one for an
+  operation the spec has. A missing or duplicate `operationId` fails generation, so fix it in the spec.
+- **A few hand-written shortcuts remain** (`contacts`, `tags`, `letters`): one line each over `raw`, kept for
+  their shorter names, merged over the generated groups. Anything not shortcut is reachable through the
+  generated methods or `raw`.
 - **One runtime dependency** (`openapi-fetch`). Adding another is a decision to raise, not a default.
 - **Browser safety.** A company API key must never reach a browser bundle; the README says so and new docs
   must keep saying so.

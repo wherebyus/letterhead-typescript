@@ -130,3 +130,72 @@ describe('request bodies', () => {
     expect(captured[0]?.body).toBe('email=person%40example.org&api=true');
   });
 });
+
+describe('generated methods', () => {
+  it('has a method for every operation in the spec', async () => {
+    const { parse } = await import('yaml');
+    const { readFile } = await import('node:fs/promises');
+    const spec = parse(await readFile(new URL('../spec/openapi.yaml', import.meta.url), 'utf8'));
+    const operationIds = Object.values<Record<string, { operationId?: string }>>(spec.paths).flatMap((pathItem) =>
+      ['get', 'put', 'post', 'delete', 'patch'].flatMap((method) => (pathItem[method] ? [pathItem[method].operationId] : [])),
+    );
+    const { client } = createRecordingClient(200, {});
+    const methodNames = Object.entries(client)
+      .filter(([group]) => group !== 'raw')
+      .flatMap(([, methods]) => Object.keys(methods));
+    expect(operationIds.length).toBeGreaterThan(200);
+    expect(operationIds.filter((id) => !methodNames.includes(id as string))).toEqual([]);
+  });
+
+  it('sends path, query and the api flag for a read with no body', async () => {
+    const { client, captured } = createRecordingClient(200, { items: [] });
+    await client.curations.listCurations({ query: { limit: 5 } as never });
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url.pathname).toBe('/api/v3/curations');
+    expect(captured[0]?.url.searchParams.get('api')).toBe('true');
+    expect(captured[0]?.url.searchParams.get('limit')).toBe('5');
+    expect(captured[0]?.body).toBe('');
+  });
+
+  it('sends a form operation as form fields, arrays as repeated fields, with the api flag', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.curations.discoverContent({ body: { query: 'cats', 'channels[]': ['a', 'b'] } as never });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.headers.get('content-type')).toContain('multipart/form-data');
+    expect(captured[0]?.body).toContain('name="channels[]"');
+    expect(captured[0]?.body).toContain('name="api"');
+  });
+
+  it('sends a form operation on PUT as JSON, and form booleans as 1 or 0', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.automations.updateAnAutomationEmailPreference({
+      body: { channelId: 1, eventSlug: 'x', enabled: false } as never,
+    });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.headers.get('content-type')).toContain('application/json');
+    expect(JSON.parse(captured[0]?.body ?? '')).toMatchObject({ enabled: false });
+    await client.curations.discoverContent({ body: { query: 'x', flag: true } as never });
+    expect(captured[1]?.body).toMatch(/name="flag"\r\n\r\n1\r\n/);
+  });
+
+  it('leaves out an argument the operation does not need, and an empty required body', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.curations.listCurations();
+    await client.contacts.deleteAContact({ path: { email: 'a@example.org' } });
+    expect(captured[1]?.method).toBe('DELETE');
+    expect(captured[1]?.url.pathname).toBe('/api/v3/contacts/a%40example.org');
+    expect(JSON.parse(captured[1]?.body ?? '')).toEqual({ api: true });
+  });
+
+  it('returns a download as text instead of failing to read it as JSON', async () => {
+    const recordingFetch = async () => new Response('a,b\n1,2\n', { status: 200, headers: { 'Content-Type': 'text/csv' } });
+    const client = createLetterheadClient({ apiKey: 'k', fetch: recordingFetch as unknown as typeof fetch });
+    const csv = await client.promotions.downloadPromotionMetrics({ path: { promotionCollateralUid: 'abc' } });
+    expect(csv).toBe('a,b\n1,2\n');
+  });
+
+  it('throws LetterheadError on an error status', async () => {
+    const { client } = createRecordingClient(404, { message: 'Not found' });
+    await expect(client.curations.listCurations()).rejects.toBeInstanceOf(LetterheadError);
+  });
+});
