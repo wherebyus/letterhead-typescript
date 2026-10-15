@@ -28,9 +28,15 @@ const splitFlag = (token: string): [string, string | undefined] => {
 
 /**
  * Reads `letterhead <group> <command> --flag value --flag=value --switch`. Which flags are switches (never taking
- * the next word) is passed in, since it depends on the command: a boolean parameter is a switch too.
+ * the next word, unless it is `true` or `false`) is passed in, since it depends on the command: a boolean parameter
+ * is a switch too. Any other flag given without a value is a mistake, unless `lenient` (the first pass, made before
+ * the command and so its switches are known).
  */
-export const parseArgs = (argv: string[], isSwitch: (flag: string) => boolean): ParsedArgs => {
+export const parseArgs = (
+  argv: string[],
+  isSwitch: (flag: string) => boolean,
+  lenient = false,
+): ParsedArgs => {
   const words: string[] = [];
   const flags = new Map<string, string[]>();
   const add = (name: string, value: string) => flags.set(name, [...(flags.get(name) ?? []), value]);
@@ -56,7 +62,21 @@ export const parseArgs = (argv: string[], isSwitch: (flag: string) => boolean): 
       continue;
     }
     const next = argv[index + 1];
-    if (isSwitch(name) || next === undefined || next.startsWith('--')) {
+    if (isSwitch(name)) {
+      // A switch may still be given an explicit true or false as the next word.
+      if (next === 'true' || next === 'false') {
+        add(name, next);
+        index += 1;
+      } else {
+        add(name, 'true');
+      }
+      continue;
+    }
+    if (next === undefined || next.startsWith('--')) {
+      // Before the command is known, a bare flag may be one of its switches; the second pass decides.
+      if (!lenient) {
+        throw new UsageError(`--${name} needs a value.`);
+      }
       add(name, 'true');
       continue;
     }

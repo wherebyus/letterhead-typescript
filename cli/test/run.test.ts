@@ -95,6 +95,13 @@ describe('letterhead CLI', () => {
     expect(stderr()).toContain('needs --yes');
   });
 
+  it('reads --yes=no as not confirmed', async () => {
+    const { io, captured } = createIo();
+
+    expect(await run(['contacts', 'delete-a-contact', '--email', 'a@example.org', '--yes=no'], io)).toBe(2);
+    expect(captured).toHaveLength(0);
+  });
+
   it('deletes with --yes, or when a person confirms', async () => {
     const withFlag = createIo();
     expect(await run(['contacts', 'delete-a-contact', '--email', 'a@example.org', '--yes'], withFlag.io)).toBe(0);
@@ -117,6 +124,9 @@ describe('letterhead CLI', () => {
       ['contacts', 'no-such-command'],
       ['no-such-group', 'x'],
       ['contacts', 'list-tags', '--body', '{}'],
+      ['contacts', 'get', '--email'],
+      ['contacts', 'delete-a-contact', '--email', '--yes'],
+      ['contacts', 'upsert', '--body', '@missing.json'],
     ];
     for (const argv of cases) {
       const { io, captured } = createIo();

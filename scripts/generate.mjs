@@ -176,7 +176,9 @@ const commandFor = ({ path, method, operation, pathParameters }) => {
     if (parameter.in !== 'path' && parameter.in !== 'query') {
       continue;
     }
-    const flag = toKebabCase(parameter.name);
+    // A parameter named like one of the CLI's own flags gets a suffix rather than failing the whole generation.
+    const kebab = toKebabCase(parameter.name);
+    const flag = reservedFlags.includes(kebab) ? `${kebab}-param` : kebab;
     if (taken.has(flag)) {
       throw new Error(`Parameter ${parameter.name} on ${where} makes a CLI flag (--${flag}) that is already taken.`);
     }

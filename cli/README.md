@@ -36,7 +36,7 @@ letterhead contacts upsert --email person@example.org --first-name Pat --tag vip
 letterhead tags add-to-contacts --tag webinar-attendee --email a@example.org --email b@example.org
 
 # Any operation, by group and name
-letterhead segments list-segments --limit 10
+letterhead contacts list-tags --limit 10
 ```
 
 Commands are `letterhead <group> <command>`. `letterhead --help` lists the groups, `letterhead <group> --help` lists

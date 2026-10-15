@@ -48,6 +48,8 @@ jobs:
           npm test
           npm run build
           npm run test:dist
+          npm run build:cli
+          npm run test:cli-dist
       - name: Open or update the pull request
         if: steps.changed.outputs.changed == 'true'
         env:
@@ -66,7 +68,7 @@ jobs:
           if [ -z "$(gh pr list --head "$branch" --state open --json number --jq '.[].number')" ]; then
             gh pr create --base main --head "$branch" \
               --title "feat(sdk): pick up API changes from the published spec" \
-              --body "The published API description changed. This regenerates the types and methods from it; the workflow already ran typecheck, tests, build and the package smoke test. Pull requests opened by a workflow do not start CI on their own, so close and reopen this one to run it before merging."
+              --body "The published API description changed. This regenerates the SDK's types and methods and the CLI's commands from it; the workflow already ran typecheck, tests, both builds and their smoke tests. Release both packages after merging. Pull requests opened by a workflow do not start CI on their own, so close and reopen this one to run it before merging."
           fi
       - name: Close a pull request the spec no longer needs
         if: steps.changed.outputs.changed == 'false'

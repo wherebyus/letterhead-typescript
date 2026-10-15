@@ -36,9 +36,10 @@ const resolveCommand = (group: string, command: string): Resolved | undefined =>
   return entry ? { entry, invokedAs: `${group} ${command}`, flagAliases: {} } : undefined;
 };
 
+// A switch is on only when given bare or as true, 1 or yes; anything else (`--yes=no`) leaves it off.
 const isOn = (flags: Map<string, string[]>, name: string) => {
-  const values = flags.get(name);
-  return values !== undefined && values[values.length - 1] !== 'false';
+  const value = flags.get(name)?.at(-1);
+  return value !== undefined && ['true', '1', 'yes'].includes(value);
 };
 
 const lastValue = (flags: Map<string, string[]>, name: string) => flags.get(name)?.at(-1);
@@ -48,7 +49,11 @@ const readBody = async (source: string, io: CliIo): Promise<Record<string, unkno
   if (source === '-') {
     text = await io.readStdin();
   } else if (source.startsWith('@')) {
-    text = await io.readFile(source.slice(1));
+    try {
+      text = await io.readFile(source.slice(1));
+    } catch {
+      throw new UsageError(`--body could not read ${source.slice(1)}.`);
+    }
   }
   let parsed: unknown;
   try {
@@ -106,11 +111,14 @@ const buildArgs = async (resolved: Resolved, flags: Map<string, string[]>, io: C
   };
 };
 
-const confirmDelete = async (resolved: Resolved, flags: Map<string, string[]>, io: CliIo) => {
+const confirmDelete = async (resolved: Resolved, flags: Map<string, string[]>, args: { path?: object }, io: CliIo) => {
   if (resolved.entry.method !== 'DELETE' || isOn(flags, 'yes')) {
     return;
   }
-  const answer = io.confirm(`This deletes (${resolved.entry.summary}). Continue? Type "yes": `);
+  const target = Object.entries(args.path ?? {})
+    .map(([name, value]) => `${name} ${String(value)}`)
+    .join(', ') || resolved.entry.path;
+  const answer = io.confirm(`This deletes: ${resolved.entry.summary} (${target}). Continue? Type "yes": `);
   if (answer === undefined) {
     throw new UsageError(`"${resolved.invokedAs}" deletes, so it needs --yes when not run in a terminal.`);
   }
@@ -135,7 +143,7 @@ const printResult = async (result: unknown, compact: boolean, io: CliIo) => {
 };
 
 const runCommand = async (argv: string[], io: CliIo): Promise<number> => {
-  const first = parseArgs(argv, (flag) => globalBooleanFlags.includes(flag));
+  const first = parseArgs(argv, (flag) => globalBooleanFlags.includes(flag), true);
   const help = isOn(first.flags, 'help');
   if (isOn(first.flags, 'version')) {
     io.stdout(`${io.version}\n`);
@@ -175,12 +183,11 @@ const runCommand = async (argv: string[], io: CliIo): Promise<number> => {
   };
   const { flags } = parseArgs(argv, (flag) => globalBooleanFlags.includes(flag) || isBooleanFlag(flag));
   const args = await buildArgs(resolved, flags, io);
-  await confirmDelete(resolved, flags, io);
-
   const apiKey = lastValue(flags, 'api-key') ?? io.env.LETTERHEAD_API_KEY;
   if (!apiKey) {
     throw new UsageError('No API key. Set LETTERHEAD_API_KEY or pass --api-key.');
   }
+  await confirmDelete(resolved, flags, args, io);
   const baseUrl = lastValue(flags, 'base-url') ?? io.env.LETTERHEAD_BASE_URL;
   const client = createLetterheadClient({
     apiKey,
