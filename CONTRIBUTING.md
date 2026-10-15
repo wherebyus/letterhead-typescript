@@ -20,3 +20,8 @@ re-enable it under Actions if it stops.
 
 To release, bump `version` in `package.json`, merge, and push a matching tag (`v1.2.3`). The Publish workflow
 publishes to npm through Trusted Publishing, so no token is needed.
+
+The CLI in `cli/` is published separately as `@tryletterhead/cli`. Build and check it with `npm run build:cli` and
+`npm run test:cli-dist`. To release it, bump `version` in `cli/package.json`, merge, and push a matching
+`cli-vX.Y.Z` tag; the Publish CLI workflow publishes it. After a spec-sync pull request merges, release the CLI as
+well as the SDK so its commands pick up the change.

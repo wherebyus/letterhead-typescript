@@ -28,3 +28,6 @@ jobs:
       - run: npm run build
       - name: Built package loads through import and require
         run: npm run test:dist
+      - run: npm run build:cli
+      - name: Built CLI runs as an executable
+        run: npm run test:cli-dist

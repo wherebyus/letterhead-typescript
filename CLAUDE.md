@@ -17,9 +17,17 @@ is public: never name or link a private Letterhead repository, project, or inter
 - **A few hand-written shortcuts remain** (`contacts`, `tags`, `letters`): one line each over `raw`, kept for
   their shorter names, merged over the generated groups. Anything not shortcut is reachable through the
   generated methods or `raw`.
+- **The CLI lives in `cli/` and is published separately**, as `@tryletterhead/cli` (a `letterhead` command).
+  Its commands come from `src/generated/catalog.ts`, which `scripts/generate.mjs` writes from the spec alongside
+  the methods, so a new endpoint is also a new command. The CLI is bundled with the SDK source into one file with
+  no dependencies (`npm run build:cli`), so it always matches the spec it was built from. It reads the API key from
+  `LETTERHEAD_API_KEY` or `--api-key` only and never stores it, and a DELETE needs `--yes` unless a person confirms
+  at a terminal. Its few shortcuts are aliases of generated commands (`cli/src/shortcuts.ts`), never separate code.
 - **One runtime dependency** (`openapi-fetch`). Adding another is a decision to raise, not a default.
 - **Browser safety.** A company API key must never reach a browser bundle; the README says so and new docs
   must keep saying so.
-- **Checks:** `npm run check:generated`, `npm run typecheck`, `npm test`, `npm run build`. CI runs them on
+- **Checks:** `npm run check:generated`, `npm run typecheck`, `npm test`, `npm run build`, `npm run build:cli`,
+  `npm run test:cli-dist`. CI runs them on
   push to `main` and on non-draft PRs.
-- **Commits:** Conventional Commits. Releases: bump `package.json`, then push a `vX.Y.Z` tag.
+- **Commits:** Conventional Commits. Releases: bump `package.json`, then push a `vX.Y.Z` tag. The CLI releases on
+  its own: bump `cli/package.json`, then push a `cli-vX.Y.Z` tag.

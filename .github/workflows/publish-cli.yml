@@ -1,0 +1,39 @@
+name: Publish CLI
+
+# Publishes @tryletterhead/cli (from cli/) to npm when a CLI version tag (cli-v0.1.0, ...) is pushed. The SDK's own
+# tags (v0.2.0, ...) go through publish.yml; the two packages are versioned separately.
+# Authenticates with npm Trusted Publishing (GitHub OIDC), as publish.yml does, so no token or secret is involved.
+on:
+  push:
+    tags: ['cli-v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: npm 11.5.1+ (needed for Trusted Publishing)
+        run: npm install -g npm@latest
+      - run: npm ci
+      - name: Tag matches cli/package.json version
+        run: test "cli-v$(node -p "require('./cli/package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm run check:generated
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:cli
+      - run: npm run test:cli-dist
+      - run: npm publish --provenance --access public
+        working-directory: cli
