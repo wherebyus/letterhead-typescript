@@ -105,7 +105,9 @@ const methodLines = (operations) => {
     if (shortcutNames[group]?.includes(id)) {
       throw new Error(`operationId ${id} on ${where} collides with a hand-written shortcut in src/client.ts.`);
     }
-    const multipart = Object.keys(operation.requestBody?.content ?? {}).includes('multipart/form-data');
+    // PHP only reads form fields from a POST, so a form operation on any other verb is sent as JSON.
+    const multipart =
+      method === 'post' && Object.keys(operation.requestBody?.content ?? {}).includes('multipart/form-data');
     const options = `{ sendsBody: ${Boolean(operation.requestBody)}, multipart: ${multipart}, parseAs: '${parseAsFor(operation)}' }`;
     const line =
       `    ${id}: (...args: OperationArgList<'${id}'>) =>\n` +

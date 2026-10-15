@@ -166,6 +166,18 @@ describe('generated methods', () => {
     expect(captured[0]?.body).toContain('name="api"');
   });
 
+  it('sends a form operation on PUT as JSON, and form booleans as 1 or 0', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.automations.updateAnAutomationEmailPreference({
+      body: { channelId: 1, eventSlug: 'x', enabled: false } as never,
+    });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.headers.get('content-type')).toContain('application/json');
+    expect(JSON.parse(captured[0]?.body ?? '')).toMatchObject({ enabled: false });
+    await client.curations.discoverContent({ body: { query: 'x', flag: true } as never });
+    expect(captured[1]?.body).toMatch(/name="flag"\r\n\r\n1\r\n/);
+  });
+
   it('leaves out an argument the operation does not need, and an empty required body', async () => {
     const { client, captured } = createRecordingClient(200, {});
     await client.curations.listCurations();

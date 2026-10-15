@@ -89,6 +89,17 @@ const serializeBodyWithApiFlag = (body: unknown, headers?: unknown): unknown =>
 
 // The form endpoints take form fields. Arrays become repeated fields (so a `channels[]` key reaches the API as the
 // list it is), files pass through, and anything else nested is sent as JSON text.
+// The API reads a form boolean as 1 or 0 ("false" fails its boolean check).
+const formValue = (item: unknown): string | Blob => {
+  if (item instanceof Blob || typeof item === 'string') {
+    return item;
+  }
+  if (typeof item === 'boolean') {
+    return item ? '1' : '0';
+  }
+  return typeof item === 'object' ? JSON.stringify(item) : String(item);
+};
+
 const toFormData = (body: unknown): FormData => {
   if (body instanceof FormData) {
     return body;
@@ -99,7 +110,7 @@ const toFormData = (body: unknown): FormData => {
       if (item === undefined || item === null) {
         continue;
       }
-      form.append(name, item instanceof Blob || typeof item === 'string' ? item : typeof item === 'object' ? JSON.stringify(item) : String(item));
+      form.append(name, formValue(item));
     }
   }
   return form;

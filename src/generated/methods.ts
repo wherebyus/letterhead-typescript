@@ -317,7 +317,7 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
     setChannelDefaultSender: (...args: OperationArgList<'setChannelDefaultSender'>) =>
       call('POST', "/api/v3/channels/{channel}/default-sender", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'setChannelDefaultSender'>>,
     deleteAChannel: (...args: OperationArgList<'deleteAChannel'>) =>
-      call('DELETE', "/api/v3/channels/{channelSlug}", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'deleteAChannel'>>,
+      call('DELETE', "/api/v3/channels/{channelSlug}", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'deleteAChannel'>>,
     updateAChannelSlug: (...args: OperationArgList<'updateAChannelSlug'>) =>
       call('POST', "/api/v3/channels/{channelSlug}/actions/update-slug", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'updateAChannelSlug'>>,
     updateAChannelTitle: (...args: OperationArgList<'updateAChannelTitle'>) =>
@@ -373,7 +373,7 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
     getAnAutomationEmailPreference: (...args: OperationArgList<'getAnAutomationEmailPreference'>) =>
       call('GET', "/api/v3/automations/email-preferences", args[0], { sendsBody: false, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'getAnAutomationEmailPreference'>>,
     updateAnAutomationEmailPreference: (...args: OperationArgList<'updateAnAutomationEmailPreference'>) =>
-      call('PUT', "/api/v3/automations/email-preferences", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'updateAnAutomationEmailPreference'>>,
+      call('PUT', "/api/v3/automations/email-preferences", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'updateAnAutomationEmailPreference'>>,
   },
   transactionalEmail: {
     createATransactionalEmailDraft: (...args: OperationArgList<'createATransactionalEmailDraft'>) =>

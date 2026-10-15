@@ -63,7 +63,8 @@ Three areas also keep shorter methods for the most common jobs:
 
 For anything you would rather call by URL, `letterhead.raw` is an
 [`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) client over the same typed paths. It returns
-`{ data, error, response }` and does not throw on an error status:
+`{ data, error, response }` and does not throw on an error status. It sends bodies as JSON, so for the few endpoints that take form uploads use
+the methods above, which send them as forms:
 
 ```ts
 const { data, error } = await letterhead.raw.GET('/api/v3/contacts/segments');
