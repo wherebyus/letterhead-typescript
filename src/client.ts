@@ -87,6 +87,24 @@ const withApiFlag = (body: unknown): unknown => {
 const serializeBodyWithApiFlag = (body: unknown, headers?: unknown): unknown =>
   (defaultBodySerializer as (body: unknown, headers?: unknown) => unknown)(withApiFlag(body), headers);
 
+// The form endpoints take form fields. Arrays become repeated fields (so a `channels[]` key reaches the API as the
+// list it is), files pass through, and anything else nested is sent as JSON text.
+const toFormData = (body: unknown): FormData => {
+  if (body instanceof FormData) {
+    return body;
+  }
+  const form = new FormData();
+  for (const [name, value] of Object.entries(body as Record<string, unknown>)) {
+    for (const item of Array.isArray(value) ? value : [value]) {
+      if (item === undefined || item === null) {
+        continue;
+      }
+      form.append(name, item instanceof Blob || typeof item === 'string' ? item : typeof item === 'object' ? JSON.stringify(item) : String(item));
+    }
+  }
+  return form;
+};
+
 const unwrap = <Data>(result: { data?: Data; error?: unknown; response: Response }): Data => {
   if (result.error !== undefined || !result.response.ok) {
     throw new LetterheadError(result.response.status, result.error);
@@ -112,19 +130,22 @@ export const createLetterheadClient = (options: LetterheadOptions) => {
 
   type LooseRequest = (
     path: string,
-    init: { params: { path?: unknown; query?: unknown }; body?: unknown },
+    init: { params: { path?: unknown; query?: unknown }; body?: unknown; parseAs: 'json' | 'text' | 'blob' },
   ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
 
   // Every operation in the spec becomes a method (see scripts/generate.mjs); this is the one place they all call.
-  const call: RequestCaller = async (method, path, args, sendsBody) => {
+  const call: RequestCaller = async (method, path, args, options) => {
     const { path: pathParameters, query, body } = (args ?? {}) as { path?: unknown; query?: unknown; body?: unknown };
     const request = raw[method] as unknown as LooseRequest;
+    // An operation that takes a body gets one even when the caller has nothing to add, so the api flag has
+    // somewhere to ride.
+    const hasBody = body !== undefined || options.sendsBody;
+    const sentBody = options.multipart ? toFormData(body ?? {}) : (body ?? {});
     return unwrap(
       await request(path, {
         params: { path: pathParameters, query },
-        // An operation that takes a body gets one even when the caller has nothing to add, so the api flag has
-        // somewhere to ride.
-        ...(body !== undefined || sendsBody ? { body: body ?? {} } : {}),
+        parseAs: options.parseAs,
+        ...(hasBody ? { body: sentBody } : {}),
       }),
     );
   };

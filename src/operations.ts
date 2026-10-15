@@ -24,11 +24,17 @@ type BodyContent<Operation extends keyof operations> = operations[Operation] ext
   ? Content[keyof Content]
   : never;
 
+// A form upload can also be handed over as a ready-made FormData.
+type BodyValue<Operation extends keyof operations> = BodyContent<Operation> | FormData;
+
+// A body the operation requires is still optional for the caller when an empty object satisfies it.
 type BodyArgs<Operation extends keyof operations> = [BodyContent<Operation>] extends [never]
   ? unknown
   : operations[Operation] extends { requestBody: unknown }
-    ? { body: BodyContent<Operation> }
-    : { body?: BodyContent<Operation> };
+    ? {} extends BodyContent<Operation>
+      ? { body?: BodyValue<Operation> }
+      : { body: BodyValue<Operation> }
+    : { body?: BodyValue<Operation> };
 
 type AllArgs<Operation extends keyof operations> = PathArgs<Operation> &
   QueryArgs<Operation> &
@@ -38,24 +44,38 @@ type AllArgs<Operation extends keyof operations> = PathArgs<Operation> &
  * What a method takes: `path` for the URL's parameters, `query` for the query string, `body` for the request body,
  * each only where the operation has one. The argument is optional when the operation needs none of them.
  */
-export type OperationArgs<Operation extends keyof operations> = {} extends AllArgs<Operation>
-  ? AllArgs<Operation> | undefined
-  : AllArgs<Operation>;
+export type OperationArgs<Operation extends keyof operations> = AllArgs<Operation>;
+
+/** The parameter list of a method: the argument may be left out when the operation needs none. */
+export type OperationArgList<Operation extends keyof operations> = {} extends AllArgs<Operation>
+  ? [args?: AllArgs<Operation>]
+  : [args: AllArgs<Operation>];
 
 type SuccessResponse<Operation extends keyof operations> = operations[Operation] extends { responses: infer Responses }
   ? Responses[Extract<keyof Responses, 200 | 201 | 202>]
   : never;
 
-/** The JSON the API answers with on success. */
+/** What the API answers with on success: its JSON, a string for text (CSV, HTML), or a Blob for a file download. */
 export type OperationResult<Operation extends keyof operations> = SuccessResponse<Operation> extends {
-  content: { 'application/json': infer Data };
+  content: infer Content;
 }
-  ? Data
+  ? Content extends { 'application/json': infer Data }
+    ? Data
+    : [Extract<keyof Content, `text/${string}`>] extends [never]
+      ? Blob
+      : string
   : unknown;
 
 export type RequestCaller = (
   method: 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH',
   path: string,
   args: unknown,
-  sendsBody: boolean,
+  options: RequestOptions,
 ) => Promise<unknown>;
+
+/** What the generator knows about an operation beyond its URL: how to send its body and read its answer. */
+export interface RequestOptions {
+  sendsBody: boolean;
+  multipart: boolean;
+  parseAs: 'json' | 'text' | 'blob';
+}

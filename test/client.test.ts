@@ -157,15 +157,33 @@ describe('generated methods', () => {
     expect(captured[0]?.body).toBe('');
   });
 
-  it('sends a body the caller gave, with the api flag added', async () => {
+  it('sends a form operation as form fields, arrays as repeated fields, with the api flag', async () => {
     const { client, captured } = createRecordingClient(200, {});
-    await client.curations.discoverContent({ body: { query: 'cats' } as never });
+    await client.curations.discoverContent({ body: { query: 'cats', 'channels[]': ['a', 'b'] } as never });
     expect(captured[0]?.method).toBe('POST');
-    expect(JSON.parse(captured[0]?.body ?? "")).toMatchObject({ query: 'cats', api: true });
+    expect(captured[0]?.headers.get('content-type')).toContain('multipart/form-data');
+    expect(captured[0]?.body).toContain('name="channels[]"');
+    expect(captured[0]?.body).toContain('name="api"');
+  });
+
+  it('leaves out an argument the operation does not need, and an empty required body', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.curations.listCurations();
+    await client.contacts.deleteAContact({ path: { email: 'a@example.org' } });
+    expect(captured[1]?.method).toBe('DELETE');
+    expect(captured[1]?.url.pathname).toBe('/api/v3/contacts/a%40example.org');
+    expect(JSON.parse(captured[1]?.body ?? '')).toEqual({ api: true });
+  });
+
+  it('returns a download as text instead of failing to read it as JSON', async () => {
+    const recordingFetch = async () => new Response('a,b\n1,2\n', { status: 200, headers: { 'Content-Type': 'text/csv' } });
+    const client = createLetterheadClient({ apiKey: 'k', fetch: recordingFetch as unknown as typeof fetch });
+    const csv = await client.promotions.downloadPromotionMetrics({ path: { promotionCollateralUid: 'abc' } });
+    expect(csv).toBe('a,b\n1,2\n');
   });
 
   it('throws LetterheadError on an error status', async () => {
     const { client } = createRecordingClient(404, { message: 'Not found' });
-    await expect(client.curations.listCurations(undefined)).rejects.toBeInstanceOf(LetterheadError);
+    await expect(client.curations.listCurations()).rejects.toBeInstanceOf(LetterheadError);
   });
 });
