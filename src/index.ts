@@ -7,3 +7,4 @@ export {
   type LetterheadRawClient,
 } from './client';
 export type { components, operations, paths } from './generated/schema';
+export type { OperationArgs, OperationResult } from './operations';

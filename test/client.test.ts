@@ -130,3 +130,42 @@ describe('request bodies', () => {
     expect(captured[0]?.body).toBe('email=person%40example.org&api=true');
   });
 });
+
+describe('generated methods', () => {
+  it('has a method for every operation in the spec', async () => {
+    const { parse } = await import('yaml');
+    const { readFile } = await import('node:fs/promises');
+    const spec = parse(await readFile(new URL('../spec/openapi.yaml', import.meta.url), 'utf8'));
+    const operationIds = Object.values<Record<string, { operationId?: string }>>(spec.paths).flatMap((pathItem) =>
+      ['get', 'put', 'post', 'delete', 'patch'].flatMap((method) => (pathItem[method] ? [pathItem[method].operationId] : [])),
+    );
+    const { client } = createRecordingClient(200, {});
+    const methodNames = Object.entries(client)
+      .filter(([group]) => group !== 'raw')
+      .flatMap(([, methods]) => Object.keys(methods));
+    expect(operationIds.length).toBeGreaterThan(200);
+    expect(operationIds.filter((id) => !methodNames.includes(id as string))).toEqual([]);
+  });
+
+  it('sends path, query and the api flag for a read with no body', async () => {
+    const { client, captured } = createRecordingClient(200, { items: [] });
+    await client.curations.listCurations({ query: { limit: 5 } as never });
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url.pathname).toBe('/api/v3/curations');
+    expect(captured[0]?.url.searchParams.get('api')).toBe('true');
+    expect(captured[0]?.url.searchParams.get('limit')).toBe('5');
+    expect(captured[0]?.body).toBe('');
+  });
+
+  it('sends a body the caller gave, with the api flag added', async () => {
+    const { client, captured } = createRecordingClient(200, {});
+    await client.curations.discoverContent({ body: { query: 'cats' } as never });
+    expect(captured[0]?.method).toBe('POST');
+    expect(JSON.parse(captured[0]?.body ?? "")).toMatchObject({ query: 'cats', api: true });
+  });
+
+  it('throws LetterheadError on an error status', async () => {
+    const { client } = createRecordingClient(404, { message: 'Not found' });
+    await expect(client.curations.listCurations(undefined)).rejects.toBeInstanceOf(LetterheadError);
+  });
+});

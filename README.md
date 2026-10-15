@@ -41,18 +41,29 @@ other front-end app calls; don't call Letterhead directly from the browser with 
 
 ## What's included
 
-| Resource | Methods |
+Every operation in the published API has a method, grouped by area and named for what it does, so new endpoints
+show up in the SDK as they are added to the API. Each takes one argument with `path`, `query` and `body` where
+the operation has them, and returns the response body. A method throws a `LetterheadError` (with `status` and
+`body`) when the API answers with an error.
+
+```ts
+const { items } = await letterhead.segments.listSegments({ query: { limit: 10 } });
+```
+
+The areas are `contacts`, `segments`, `letters`, `curations`, `promotions`, `channels`, `metrics`, `automations`,
+`transactionalEmail`, `teams`, `agents` and `links`. Your editor lists every method on each.
+
+Three areas also keep shorter methods for the most common jobs:
+
+| Resource | Shortcuts |
 | --- | --- |
 | `contacts` | `upsert`, `get`, `update`, `delete` |
 | `tags` | `create`, `list`, `get`, `update`, `delete`, `addToContacts`, `removeFromContacts` |
 | `letters` (newsletters) | `list`, `get`, `create`, `update`, `delete` |
 
-These methods return the response body and throw a `LetterheadError` (with `status` and `body`) when the API
-answers with an error.
-
-Every other endpoint in the published API is available, typed, through `letterhead.raw`, an
-[`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) client. It returns `{ data, error, response }` and
-does not throw on an error status:
+For anything you would rather call by URL, `letterhead.raw` is an
+[`openapi-fetch`](https://openapi-ts.dev/openapi-fetch/) client over the same typed paths. It returns
+`{ data, error, response }` and does not throw on an error status:
 
 ```ts
 const { data, error } = await letterhead.raw.GET('/api/v3/contacts/segments');
