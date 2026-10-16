@@ -35,5 +35,9 @@ jobs:
       - run: npm test
       - run: npm run build:cli
       - run: npm run test:cli-dist
+      # First release only: @tryletterhead/cli has no trusted publisher until it exists on npm, so npm falls back to
+      # this token. Remove the env block (and the NPM_TOKEN secret) once the trusted publisher is configured.
       - run: npm publish --provenance --access public
         working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
