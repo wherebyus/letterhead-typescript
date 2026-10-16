@@ -72,6 +72,15 @@ const { data, error } = await letterhead.raw.GET('/api/v3/contacts/segments');
 
 You never pass the `api=true` flag the API reference mentions — the SDK adds it to every request.
 
+## Command line
+
+[`@tryletterhead/cli`](https://github.com/wherebyus/letterhead-typescript/tree/main/cli#readme) puts every API
+operation behind a `letterhead` command, generated from the same API description:
+
+```sh
+npx @tryletterhead/cli contacts upsert --email person@example.org --tag vip
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](https://github.com/wherebyus/letterhead-typescript/blob/main/CONTRIBUTING.md).

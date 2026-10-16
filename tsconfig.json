@@ -28,6 +28,8 @@
   "include": [
     "src",
     "test",
-    "examples"
+    "examples",
+    "cli/src",
+    "cli/test"
   ]
 }

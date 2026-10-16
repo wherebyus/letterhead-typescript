@@ -1,0 +1,31 @@
+{
+  "name": "@tryletterhead/cli",
+  "version": "0.1.0",
+  "description": "The Letterhead API from your terminal: one command for every API operation.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wherebyus/letterhead-typescript.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/wherebyus/letterhead-typescript/tree/main/cli#readme",
+  "keywords": [
+    "letterhead",
+    "newsletter",
+    "email",
+    "api",
+    "cli"
+  ],
+  "type": "module",
+  "bin": {
+    "letterhead": "./dist/letterhead.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
