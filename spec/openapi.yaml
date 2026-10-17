@@ -52,7 +52,9 @@ tags:
       and unsubscribes.
   - name: Automations
     description: Automations send a sequence of emails on their own once someone qualifies for it. These
-      endpoints let you change the template an automation uses and restart one that has stopped.
+      endpoints let you list automations and check their health, pause or resume them, run one, change
+      the template an automation uses, restart one that has stopped, and manage your own notification
+      email preferences for automation events.
   - name: Transactional Email
     description: Transactional emails are one-off messages to an individual, such as a password reset
       or a purchase confirmation. This service is available on request and needs a dedicated sending IP.
@@ -17402,7 +17404,9 @@ paths:
         - Automations
       summary: Reactivate and restart an automation
       description: |-
-        This endpoint restarts the specified automation, in the event that as part of editorial -- someone didn't republish a change -- the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+        This endpoint restarts an automation that stopped because its template was switched off -- for example, someone didn't republish a change as part of editorial and the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+
+        The automation resumes on its normal schedule. No newsletter is sent by this call. If the automation hasn't stopped on an error, nothing changes and the call returns `200`. An automation that stopped for any other reason (for example, no template selected, repeated content, a deleted segment, or an unavailable email provider connection) cannot be reactivated this way and returns `422` with a message naming what to fix first.
 
         Our `v3` endpoints require a company-level API key.
       operationId: reactivateAndRestartAnAutomation
@@ -17421,6 +17425,24 @@ paths:
               required:
                 - api
       responses:
+        '200':
+          description: 200 - The automation is already active, so nothing changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: string
+                    nullable: true
+                  message:
+                    type: string
+                  total:
+                    type: integer
+              example:
+                items: null
+                message: This automation is already active, so there was nothing to reactivate.
+                total: 0
         '202':
           description: 202 - Reactivated and restarted
           content:
@@ -17437,8 +17459,21 @@ paths:
                     type: integer
               example:
                 items: null
-                message: Automation reactivated and restarted successfully
+                message: Automation reactivated. It will resume on its normal schedule -- no newsletter was
+                  sent just now.
                 total: 0
+        '422':
+          description: 422 - The automation stopped for a reason reactivation can't clear. The message
+            names what to fix first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: This automation needs a newsletter template selected before it can be reactivated.
     parameters:
       - name: automationUniqueId
         in: path
@@ -17456,9 +17491,11 @@ paths:
         matching `PUT` endpoint read and set the signed-in user's email notification preference for one
         event at a time. `eventSlug` accepts the two automation events
         (`automation_deactivated`, `automation_template_reactivated`) as well as Letterhead's other
-        notification events (imports/exports finishing, a review being requested, an AI text generation
-        failing, new comments, a duplicate email being detected, an RSS feed failure, a system or webhook
-        failure, a goal being reached, and an Analyze agent finishing).
+        notification events (imports/exports finishing, an email being sent, a review being requested,
+        an AI text generation failing, new comments, a duplicate email being detected, an RSS feed
+        failure, a system or webhook failure, a goal being reached, an Analyze agent finishing, a
+        scheduled newsletter that couldn't be sent, and a sending domain's warm-up being held or
+        paused). The accepted values are listed on the `eventSlug` parameter.
 
         This reads the current user's own preference, so it authenticates as a signed-in user rather than
         a company API key and is not available to external integrations.
@@ -17477,6 +17514,24 @@ paths:
             `automation_template_reactivated`.'
           schema:
             type: string
+            enum:
+              - automation_deactivated
+              - automation_template_reactivated
+              - import_success_failure
+              - export_success_failure
+              - email_sent
+              - review_requested
+              - ai_text_failed
+              - new_comments
+              - duplicate_email_detected
+              - rss_feed_failure
+              - system_failure
+              - webhook_failure
+              - goal_reached
+              - analyze_agent_finished
+              - newsletter_not_sent
+              - sending_domain_warmup
+              - standing_task_finished
       responses:
         '200':
           description: 200 OK
@@ -17532,6 +17587,24 @@ paths:
                   type: string
                   description: 'The notification event, e.g. `automation_deactivated` or
                     `automation_template_reactivated`.'
+                  enum:
+                    - automation_deactivated
+                    - automation_template_reactivated
+                    - import_success_failure
+                    - export_success_failure
+                    - email_sent
+                    - review_requested
+                    - ai_text_failed
+                    - new_comments
+                    - duplicate_email_detected
+                    - rss_feed_failure
+                    - system_failure
+                    - webhook_failure
+                    - goal_reached
+                    - analyze_agent_finished
+                    - newsletter_not_sent
+                    - sending_domain_warmup
+                    - standing_task_finished
                 enabled:
                   type: boolean
                   description: Whether the user should receive this notification by email.
