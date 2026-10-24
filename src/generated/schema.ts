@@ -2881,7 +2881,9 @@ export interface paths {
          *
          *     ## Response field naming note
          *
-         *     The list response uses `image` and `position` for two fields that the **Get a promotion** endpoint exposes as `imageUrl` and `zone`. Same data, different keys — this is a legacy inconsistency in the API. Treat them as aliases. The same applies to `promotionCampaignUid` (list) vs the campaign-uid embedded in the show response.
+         *     The list response uses `image` for the field that the **Get a promotion** endpoint exposes as `imageUrl`. Same data, different key — this is a legacy inconsistency in the API. The same applies to `promotionCampaignUid` (list) vs the campaign-uid embedded in the show response.
+         *
+         *     `position` is **not** an alias of `zone`: it is an integer, the zone code (`1` = A through `10` = J) or the auto-inject position. Each item also carries a separate `zone` letter field (null when the promotion has no zone), plus `type` (integer or null), `autoInject` (boolean) and `autoInjectPosition` (integer).
          */
         get: operations["listPromotions"];
         put?: never;
@@ -4108,7 +4110,9 @@ export interface paths {
         put?: never;
         /**
          * Reactivate and restart an automation
-         * @description This endpoint restarts the specified automation, in the event that as part of editorial -- someone didn't republish a change -- the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+         * @description This endpoint restarts an automation that stopped because its template was switched off -- for example, someone didn't republish a change as part of editorial and the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+         *
+         *     The automation resumes on its normal schedule. No newsletter is sent by this call. If the automation hasn't stopped on an error, nothing changes and the call returns `200`. An automation that stopped for any other reason (for example, no template selected, repeated content, a deleted segment, or an unavailable email provider connection) cannot be reactivated this way and returns `422` with a message naming what to fix first.
          *
          *     Our `v3` endpoints require a company-level API key.
          */
@@ -4132,9 +4136,11 @@ export interface paths {
          *     matching `PUT` endpoint read and set the signed-in user's email notification preference for one
          *     event at a time. `eventSlug` accepts the two automation events
          *     (`automation_deactivated`, `automation_template_reactivated`) as well as Letterhead's other
-         *     notification events (imports/exports finishing, a review being requested, an AI text generation
-         *     failing, new comments, a duplicate email being detected, an RSS feed failure, a system or webhook
-         *     failure, a goal being reached, and an Analyze agent finishing).
+         *     notification events (imports/exports finishing, an email being sent, a review being requested,
+         *     an AI text generation failing, new comments, a duplicate email being detected, an RSS feed
+         *     failure, a system or webhook failure, a goal being reached, an Analyze agent finishing, a
+         *     scheduled newsletter that couldn't be sent, and a sending domain's warm-up being held or
+         *     paused). The accepted values are listed on the `eventSlug` parameter.
          *
          *     This reads the current user's own preference, so it authenticates as a signed-in user rather than
          *     a company API key and is not available to external integrations.
@@ -13372,7 +13378,11 @@ export interface operations {
                      *           "isActive": true,
                      *           "isInactive": false,
                      *           "isEvergreen": false,
-                     *           "position": "A",
+                     *           "position": 1,
+                     *           "zone": "A",
+                     *           "type": 1,
+                     *           "autoInject": false,
+                     *           "autoInjectPosition": 0,
                      *           "promotionCampaignUid": "a1b2c3d4e5",
                      *           "image": "https://cdn.example.com/summer-sale.png",
                      *           "imageWidth": 600,
@@ -13399,7 +13409,11 @@ export interface operations {
                             isActive?: boolean;
                             isInactive?: boolean;
                             isEvergreen?: boolean;
-                            position?: string;
+                            position?: number;
+                            zone?: string | null;
+                            type?: number | null;
+                            autoInject?: boolean;
+                            autoInjectPosition?: number;
                             promotionCampaignUid?: string;
                             image?: string;
                             imageWidth?: number;
@@ -13565,7 +13579,7 @@ export interface operations {
                      *         "The campaign title field is required.",
                      *         "The zone field is required."
                      *       ],
-                     *       "message": "Invalid request data",
+                     *       "message": "Looks like the input data doesn't meet our requirements.",
                      *       "total": 0
                      *     }
                      */
@@ -14109,7 +14123,11 @@ export interface operations {
                      *           "isActive": true,
                      *           "isInactive": false,
                      *           "isEvergreen": false,
-                     *           "position": "A",
+                     *           "position": 1,
+                     *           "zone": "A",
+                     *           "type": 1,
+                     *           "autoInject": false,
+                     *           "autoInjectPosition": 0,
                      *           "promotionCampaignUid": "a1b2c3d4e5",
                      *           "image": "https://cdn.example.com/summer-sale.png",
                      *           "imageWidth": 600,
@@ -14136,7 +14154,11 @@ export interface operations {
                             isActive?: boolean;
                             isInactive?: boolean;
                             isEvergreen?: boolean;
-                            position?: string;
+                            position?: number;
+                            zone?: string | null;
+                            type?: number | null;
+                            autoInject?: boolean;
+                            autoInjectPosition?: number;
                             promotionCampaignUid?: string;
                             image?: string;
                             imageWidth?: number;
@@ -17758,6 +17780,26 @@ export interface operations {
             };
         };
         responses: {
+            /** @description 200 - The automation is already active, so nothing changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": null,
+                     *       "message": "This automation is already active, so there was nothing to reactivate.",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: string | null;
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
             /** @description 202 - Reactivated and restarted */
             202: {
                 headers: {
@@ -17767,7 +17809,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "items": null,
-                     *       "message": "Automation reactivated and restarted successfully",
+                     *       "message": "Automation reactivated. It will resume on its normal schedule -- no newsletter was sent just now.",
                      *       "total": 0
                      *     }
                      */
@@ -17775,6 +17817,22 @@ export interface operations {
                         items?: string | null;
                         message?: string;
                         total?: number;
+                    };
+                };
+            };
+            /** @description 422 - The automation stopped for a reason reactivation can't clear. The message names what to fix first. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "This automation needs a newsletter template selected before it can be reactivated."
+                     *     }
+                     */
+                    "application/json": {
+                        message?: string;
                     };
                 };
             };
@@ -17786,7 +17844,7 @@ export interface operations {
                 /** @description The internal numeric id of the channel the notification is scoped to. */
                 channelId: number;
                 /** @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`. */
-                eventSlug: string;
+                eventSlug: "automation_deactivated" | "automation_template_reactivated" | "import_success_failure" | "export_success_failure" | "email_sent" | "review_requested" | "ai_text_failed" | "new_comments" | "duplicate_email_detected" | "rss_feed_failure" | "system_failure" | "webhook_failure" | "goal_reached" | "analyze_agent_finished" | "newsletter_not_sent" | "sending_domain_warmup" | "standing_task_finished";
             };
             header?: never;
             path?: never;
@@ -17835,8 +17893,11 @@ export interface operations {
                 "multipart/form-data": {
                     /** @description The internal numeric id of the channel the notification is scoped to. */
                     channelId: number;
-                    /** @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`. */
-                    eventSlug: string;
+                    /**
+                     * @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`.
+                     * @enum {string}
+                     */
+                    eventSlug: "automation_deactivated" | "automation_template_reactivated" | "import_success_failure" | "export_success_failure" | "email_sent" | "review_requested" | "ai_text_failed" | "new_comments" | "duplicate_email_detected" | "rss_feed_failure" | "system_failure" | "webhook_failure" | "goal_reached" | "analyze_agent_finished" | "newsletter_not_sent" | "sending_domain_warmup" | "standing_task_finished";
                     /** @description Whether the user should receive this notification by email. */
                     enabled: boolean;
                 };
