@@ -1999,6 +1999,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/letters/{letterUuid}/actions/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule a letter
+         * @description Schedule an existing letter to go out at a time you choose, or as soon as possible if you leave
+         *     `date` out. Create the letter first, for example with **Create a draft**, then schedule it here.
+         *     Scheduling a letter that is already scheduled moves it to the new time.
+         *
+         *     `date` is read in the newsletter's own timezone and must be at least a minute in the future.
+         *
+         *     If the letter is an active template, Letterhead copies it into a new edition and schedules the
+         *     copy, leaving the template as it was. A letter that has already been sent can't be scheduled.
+         */
+        post: operations["scheduleALetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/letters/{letterUuid}/agents/actions/run-preflight": {
         parameters: {
             query?: never;
@@ -2881,7 +2908,9 @@ export interface paths {
          *
          *     ## Response field naming note
          *
-         *     The list response uses `image` and `position` for two fields that the **Get a promotion** endpoint exposes as `imageUrl` and `zone`. Same data, different keys — this is a legacy inconsistency in the API. Treat them as aliases. The same applies to `promotionCampaignUid` (list) vs the campaign-uid embedded in the show response.
+         *     The list response uses `image` for the field that the **Get a promotion** endpoint exposes as `imageUrl`. Same data, different key — this is a legacy inconsistency in the API. The same applies to `promotionCampaignUid` (list) vs the campaign-uid embedded in the show response.
+         *
+         *     `position` is **not** an alias of `zone`: it is an integer, the zone code (`1` = A through `10` = J) or the auto-inject position. Each item also carries a separate `zone` letter field (null when the promotion has no zone), plus `type` (integer or null), `autoInject` (boolean) and `autoInjectPosition` (integer).
          */
         get: operations["listPromotions"];
         put?: never;
@@ -3146,20 +3175,26 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List promotion listings
+         * List promotion listings (coming soon)
          * @description List the placements (self-serve marketplace listings) your company offers for sale to
          *     advertisers. This is the publisher-authenticated management view; the unauthenticated public
          *     storefront advertisers browse is a separate, non-`v3` surface.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         get: operations["listPromotionListings"];
         put?: never;
         /**
-         * Create a promotion listing
+         * Create a promotion listing (coming soon)
          * @description Create a new self-serve marketplace listing — a placement your company offers for sale.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         post: operations["createPromotionListing"];
         delete?: never;
@@ -3178,18 +3213,24 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Update a promotion listing
+         * Update a promotion listing (coming soon)
          * @description Partial update of a promotion listing — every field is optional and only the fields sent are
          *     changed. Sending `channels` replaces the listing's whole channel set.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         post: operations["updatePromotionListing"];
         /**
-         * Delete a promotion listing
+         * Delete a promotion listing (coming soon)
          * @description Delete a promotion listing. Returns no content on success.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         delete: operations["deletePromotionListing"];
         options?: never;
@@ -3205,12 +3246,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List promotion purchases
+         * List promotion purchases (coming soon)
          * @description List every purchase ever made against your company's promotion listings — a purchase stays
          *     listed for its whole lifecycle (not just while pending review), so check each item's `status`
          *     to see what's still actionable.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         get: operations["listPromotionPurchases"];
         put?: never;
@@ -3229,12 +3273,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Preview a purchase's ad creative
+         * Preview a purchase's ad creative (coming soon)
          * @description Render the advertiser-submitted creative for a pending purchase and return it directly as
          *     `text/html` (not the usual JSON envelope) — used by the publisher to review the ad before
          *     approving it.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         get: operations["previewPromotionPurchase"];
         put?: never;
@@ -3255,12 +3302,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Review a promotion purchase
+         * Review a promotion purchase (coming soon)
          * @description The publisher's review decision on a pending purchase: approve it, reject it, or request
          *     changes from the advertiser. `feedback` is required when rejecting or requesting changes, so
          *     the buyer knows why. A purchase's payment status is never editable here.
          *
          *     `v3` endpoints expect a company API key.
+         *
+         *     This endpoint is not yet generally available: until it is released to your account, requests return
+         *     `404`.
          */
         post: operations["reviewPromotionPurchase"];
         delete?: never;
@@ -4108,7 +4158,9 @@ export interface paths {
         put?: never;
         /**
          * Reactivate and restart an automation
-         * @description This endpoint restarts the specified automation, in the event that as part of editorial -- someone didn't republish a change -- the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+         * @description This endpoint restarts an automation that stopped because its template was switched off -- for example, someone didn't republish a change as part of editorial and the automation disabled itself. Yep - this is a pretty specific use-case. The unpublished template will be published and then subsequently available to future automation use - and then the automation itself will be re-enabled.
+         *
+         *     The automation resumes on its normal schedule. No newsletter is sent by this call. If the automation hasn't stopped on an error, nothing changes and the call returns `200`. An automation that stopped for any other reason (for example, no template selected, repeated content, a deleted segment, or an unavailable email provider connection) cannot be reactivated this way and returns `422` with a message naming what to fix first.
          *
          *     Our `v3` endpoints require a company-level API key.
          */
@@ -4132,9 +4184,11 @@ export interface paths {
          *     matching `PUT` endpoint read and set the signed-in user's email notification preference for one
          *     event at a time. `eventSlug` accepts the two automation events
          *     (`automation_deactivated`, `automation_template_reactivated`) as well as Letterhead's other
-         *     notification events (imports/exports finishing, a review being requested, an AI text generation
-         *     failing, new comments, a duplicate email being detected, an RSS feed failure, a system or webhook
-         *     failure, a goal being reached, and an Analyze agent finishing).
+         *     notification events (imports/exports finishing, an email being sent, a review being requested,
+         *     an AI text generation failing, new comments, a duplicate email being detected, an RSS feed
+         *     failure, a system or webhook failure, a goal being reached, an Analyze agent finishing, a
+         *     scheduled newsletter that couldn't be sent, and a sending domain's warm-up being held or
+         *     paused). The accepted values are listed on the `eventSlug` parameter.
          *
          *     This reads the current user's own preference, so it authenticates as a signed-in user rather than
          *     a company API key and is not available to external integrations.
@@ -11150,6 +11204,84 @@ export interface operations {
             };
         };
     };
+    scheduleALetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The letter's unique identifier — an alphanumeric string around ten characters, e.g. `ludctamgd6`. */
+                letterUuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                /**
+                 * @example {
+                 *       "channel": "an-example-channel",
+                 *       "segment": 0,
+                 *       "date": "2026-11-20T06:00:00"
+                 *     }
+                 */
+                "application/json": {
+                    /** @description The slug of the channel the letter belongs to. */
+                    channel: string;
+                    /** @description The integer identifier of your target segment, which is either all or a subset of your target channel. */
+                    segment: number;
+                    /** @description (optional) When to send, as `YYYY-MM-DDTHH:MM:SS` in the newsletter's timezone. Leave it out to send as soon as possible. */
+                    date?: string;
+                    /** @description (optional) Override the letter's subject line for this send. */
+                    subject?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The letter is scheduled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": {
+                     *         "uniqueId": "ludctamgd6",
+                     *         "publicationDate": "2026-11-20 06:00:00"
+                     *       },
+                     *       "message": "Your letter will be sent at 2026-11-20 06:00:00.",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: {
+                            /** @description The scheduled letter. For an active template, this is the new edition, not the template. */
+                            uniqueId?: string;
+                            /** @description When the letter will be sent, in the newsletter's timezone. */
+                            publicationDate?: string;
+                            /** @description Present only when the letter you scheduled was an active template. The template's identifier; `uniqueId` is then the new edition copied from it. */
+                            template?: string;
+                        };
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
+            /** @description The request is invalid, for example `date` is in the past or not in `YYYY-MM-DDTHH:MM:SS` form, the letter belongs to a different channel, or it has already been sent. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The key can't schedule letters for this channel. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     runPreflightAgentsOnALetter: {
         parameters: {
             query?: never;
@@ -13372,7 +13504,11 @@ export interface operations {
                      *           "isActive": true,
                      *           "isInactive": false,
                      *           "isEvergreen": false,
-                     *           "position": "A",
+                     *           "position": 1,
+                     *           "zone": "A",
+                     *           "type": 1,
+                     *           "autoInject": false,
+                     *           "autoInjectPosition": 0,
                      *           "promotionCampaignUid": "a1b2c3d4e5",
                      *           "image": "https://cdn.example.com/summer-sale.png",
                      *           "imageWidth": 600,
@@ -13399,7 +13535,11 @@ export interface operations {
                             isActive?: boolean;
                             isInactive?: boolean;
                             isEvergreen?: boolean;
-                            position?: string;
+                            position?: number;
+                            zone?: string | null;
+                            type?: number | null;
+                            autoInject?: boolean;
+                            autoInjectPosition?: number;
                             promotionCampaignUid?: string;
                             image?: string;
                             imageWidth?: number;
@@ -13565,7 +13705,7 @@ export interface operations {
                      *         "The campaign title field is required.",
                      *         "The zone field is required."
                      *       ],
-                     *       "message": "Invalid request data",
+                     *       "message": "Looks like the input data doesn't meet our requirements.",
                      *       "total": 0
                      *     }
                      */
@@ -14109,7 +14249,11 @@ export interface operations {
                      *           "isActive": true,
                      *           "isInactive": false,
                      *           "isEvergreen": false,
-                     *           "position": "A",
+                     *           "position": 1,
+                     *           "zone": "A",
+                     *           "type": 1,
+                     *           "autoInject": false,
+                     *           "autoInjectPosition": 0,
                      *           "promotionCampaignUid": "a1b2c3d4e5",
                      *           "image": "https://cdn.example.com/summer-sale.png",
                      *           "imageWidth": 600,
@@ -14136,7 +14280,11 @@ export interface operations {
                             isActive?: boolean;
                             isInactive?: boolean;
                             isEvergreen?: boolean;
-                            position?: string;
+                            position?: number;
+                            zone?: string | null;
+                            type?: number | null;
+                            autoInject?: boolean;
+                            autoInjectPosition?: number;
                             promotionCampaignUid?: string;
                             image?: string;
                             imageWidth?: number;
@@ -17758,6 +17906,26 @@ export interface operations {
             };
         };
         responses: {
+            /** @description 200 - The automation is already active, so nothing changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": null,
+                     *       "message": "This automation is already active, so there was nothing to reactivate.",
+                     *       "total": 0
+                     *     }
+                     */
+                    "application/json": {
+                        items?: string | null;
+                        message?: string;
+                        total?: number;
+                    };
+                };
+            };
             /** @description 202 - Reactivated and restarted */
             202: {
                 headers: {
@@ -17767,7 +17935,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "items": null,
-                     *       "message": "Automation reactivated and restarted successfully",
+                     *       "message": "Automation reactivated. It will resume on its normal schedule -- no newsletter was sent just now.",
                      *       "total": 0
                      *     }
                      */
@@ -17775,6 +17943,22 @@ export interface operations {
                         items?: string | null;
                         message?: string;
                         total?: number;
+                    };
+                };
+            };
+            /** @description 422 - The automation stopped for a reason reactivation can't clear. The message names what to fix first. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "message": "This automation needs a newsletter template selected before it can be reactivated."
+                     *     }
+                     */
+                    "application/json": {
+                        message?: string;
                     };
                 };
             };
@@ -17786,7 +17970,7 @@ export interface operations {
                 /** @description The internal numeric id of the channel the notification is scoped to. */
                 channelId: number;
                 /** @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`. */
-                eventSlug: string;
+                eventSlug: "automation_deactivated" | "automation_template_reactivated" | "import_success_failure" | "export_success_failure" | "email_sent" | "review_requested" | "ai_text_failed" | "new_comments" | "duplicate_email_detected" | "rss_feed_failure" | "system_failure" | "webhook_failure" | "goal_reached" | "analyze_agent_finished" | "newsletter_not_sent" | "sending_domain_warmup" | "standing_task_finished";
             };
             header?: never;
             path?: never;
@@ -17835,8 +18019,11 @@ export interface operations {
                 "multipart/form-data": {
                     /** @description The internal numeric id of the channel the notification is scoped to. */
                     channelId: number;
-                    /** @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`. */
-                    eventSlug: string;
+                    /**
+                     * @description The notification event, e.g. `automation_deactivated` or `automation_template_reactivated`.
+                     * @enum {string}
+                     */
+                    eventSlug: "automation_deactivated" | "automation_template_reactivated" | "import_success_failure" | "export_success_failure" | "email_sent" | "review_requested" | "ai_text_failed" | "new_comments" | "duplicate_email_detected" | "rss_feed_failure" | "system_failure" | "webhook_failure" | "goal_reached" | "analyze_agent_finished" | "newsletter_not_sent" | "sending_domain_warmup" | "standing_task_finished";
                     /** @description Whether the user should receive this notification by email. */
                     enabled: boolean;
                 };
