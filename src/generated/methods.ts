@@ -188,6 +188,8 @@ export const createGeneratedMethods = (call: RequestCaller) => ({
       call('POST', "/api/v3/letters/{letterUuid}/actions/send", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'sendALetterFromATemplate'>>,
     sendALetterImmediately: (...args: OperationArgList<'sendALetterImmediately'>) =>
       call('POST', "/api/v3/letters/{letterUuid}/actions/send-now", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'sendALetterImmediately'>>,
+    scheduleALetter: (...args: OperationArgList<'scheduleALetter'>) =>
+      call('POST', "/api/v3/letters/{letterUuid}/actions/schedule", args[0], { sendsBody: true, multipart: false, parseAs: 'json' }) as Promise<OperationResult<'scheduleALetter'>>,
     runPreflightAgentsOnALetter: (...args: OperationArgList<'runPreflightAgentsOnALetter'>) =>
       call('POST', "/api/v3/letters/{letterUuid}/agents/actions/run-preflight", args[0], { sendsBody: true, multipart: true, parseAs: 'json' }) as Promise<OperationResult<'runPreflightAgentsOnALetter'>>,
     listAgentActivityOnALetter: (...args: OperationArgList<'listAgentActivityOnALetter'>) =>
